@@ -24,7 +24,7 @@ compreensão de cena — nessas tarefas uma GPU comum é largamente superior.
 | Etapa | Descrição | Situação |
 |---|---|---|
 | 0 | Neurônio axon-hillock em ngspice, modelos nível 1 | **Concluída e revalidada.** Ressalvas numéricas fechadas (§5); **consumo resolvido** em 2026-09-06 (12,6 µW → 83,5 nW) e topologia confirmada. Pendências não bloqueantes em §5-A |
-| 1 | Migrar para PDK SkyWater 130 nm | **EM ANDAMENTO — não concluída.** Neurônio migrado em 2026-09-07 (canto `tt`, 27 °C): f–I reproduz o nível 1 (ganho 13,886 contra 13,794 Hz/pA, +0,7%), consumo **14× menor** (6,03 nW contra 85,4), **43,2 pJ por disparo**. O pulso **passa no critério funcional** (§7): aciona o receptor com margens de 0,894 e 0,730 V e estática de 0,44 pW. *O critério antigo de "≥ 90% de VDD" foi revogado em `fa20a70` — era arbitrário; o circuito nunca esteve errado.* **Falta 1 critério de saída:** varredura de `Cmem` no sky130. (Fuga em `mem` e janela de histerese fechadas em 2026-09-07.) Ver `resultados/2026-09-07_migracao_sky130/` e `2026-09-07_receptor/` |
+| 1 | Migrar para PDK SkyWater 130 nm | **CONCLUÍDA em 2026-09-07.** Os seis critérios de saída fechados: armadilha do W/L, neurônio migrado, fuga em `mem` medida, janela de histerese medida, fator 1,76× resolvido (é 1,99× no PDK), e varredura de `Cmem`. Consumo **14× menor** (6,03 nW, 43,2 pJ/disparo), f–I linear com R² = 0,999996 e ganho a 0,7% do nível 1, pulso aprovado no critério funcional. **⚠️ Fecha invertendo o achado central: `Cmem` CONTROLA a frequência no PDK** (§3). |
 | 2 | Monte Carlo (descasamento) | Não iniciada — maior risco do projeto |
 | 3–10 | Cantos, par acoplado, coincidência, AER/FPGA, layout, tapeout | Não iniciadas |
 
@@ -52,20 +52,53 @@ Modelo analítico de primeira ordem que explica o achado (derivado, não medido)
 - A rampa de integração sobe a `dV/dt = Iin / Ctot`.
 - Logo o período de integração é `T = Ctot · ΔV / Iin = Cfb · VDD / Iin`.
 
-**`Cmem` é um controle fraco, com resíduo medido de 24% em 16×.** O cancelamento é real
-e dominante — a intuição ingênua `f ∝ 1/Cmem` previria 1600% — mas **não é exato**. Medido
-na revalidação: 183,1 Hz em 25 fF → 140,0 Hz em 400 fF. A formulação anterior, de que
-`Cmem` "some da equação", estava forte demais. O que fixa a frequência de primeira ordem é
-`Cfb`, `VDD` e `Iin`; `Cmem` entra como termo residual.
+> ⚠️ **REVOGADO em 2026-09-07 pela medida no PDK.** O que segue nesta caixa era a
+> formulação do nível 1 e **não sobrevive ao sky130**. Mantido riscado porque o motivo da
+> revogação vale mais que a revogação.
+>
+> ~~`Cmem` é um controle fraco, com resíduo medido de 24% em 16×. O cancelamento é real e
+> dominante — a intuição ingênua `f ∝ 1/Cmem` previria 1600% — mas não é exato. Medido na
+> revalidação: 183,1 Hz em 25 fF → 140,0 Hz em 400 fF.~~
+
+**A formulação medida no sky130** (`resultados/2026-09-07_cmem_sky130/`):
+
+**No regime integra-e-dispara, `Cmem` É o controle dominante da frequência.**
+`f ≈ k/Ctot`, com `Ctot = Cmem + 29,71 fF` medido. Medido: **290,3 Hz em 25 fF → 85,6 Hz em
+200 fF**, isto é, **3,39× sobre 8× de `Cmem`** — contra 1,26× do nível 1 no mesmo intervalo.
+O produto `f·Ctot` varia 21,4%: o modelo é aproximado, mas 16× mais estável que `f` sozinha.
+
+**Existem dois regimes, e a fronteira é a excursão da membrana em ~0,2 V:**
+
+| | `Cmem` ≤ 200 fF — integra-e-dispara | `Cmem` ≥ 400 fF — degenerado |
+|---|---|---|
+| excursão | 0,58 a 1,02 V | 0,061 a 0,19 V |
+| CV do ISI | 0,0005 a 0,0050% | **0,129 a 0,223%** — salto de 26× |
+| pulso de `out` | 1,01 a 1,80 V | 0,72 a 0,82 V, sem excursão lógica |
+| f com `Cmem` | **cai** | **sobe** |
+
+**Por que o nível 1 dizia o contrário:** ele mantinha a excursão grande com `Cmem` grande
+(0,107 V em 800 fF contra 0,061 V no sky130), sustentando a compensação. No PDK a excursão
+colapsa antes e o circuito sai do regime.
+
+**A subida em 800 fF está confirmada em dois modelos de dispositivo independentes** —
+nível 1 (×1,079) e BSIM4 do sky130 (×1,742), que não compartilham equações. A hipótese de
+mudança de regime deixa de ser especulação.
 
 **O modelo acima é incompleto por um motivo identificado:** ele supõe reset completo e
 auto-terminado. O reset real é incompleto — a membrana para em 0,406 V, não em zero — e
 por isso `Mrst` também fixa a frequência (ver §4 e §5 item 4).
 
-**Consequência de projeto:** `Cmem` deve ser **pequeno**. Não por velocidade, mas porque
-com `Cmem` grande a excursão de sinal desaba (1,43 V em 25 fF → 0,107 V em 800 fF, medido)
-e abaixo de ~0,2 V o neurônio fica refém de descasamento entre transistores e ruído de
-alimentação. A frequência se controla pela corrente de entrada, não pela capacitância.
+**Consequência de projeto — a decisão SOBREVIVE, com motivo novo e mais forte.** `Cmem`
+deve ser **pequeno**. Não mais porque "não compra lentidão": ele compra. E sim porque `Cmem`
+grande **empurra o circuito para fora do regime de integra-e-dispara** — o jitter piora 26×,
+o pulso perde excursão lógica e a frequência inverte de sentido.
+
+**E há um ganho que o projeto não sabia que tinha:** `Cmem` é um **parâmetro de projeto
+utilizável** para fixar a frequência. Antes só havia um botão, `Iin`. Agora há dois, e são
+independentes.
+
+**O impacto na área precisa ser reavaliado:** encolher `Cmem` continua possível, mas **sobe a
+frequência**. É compromisso acoplado, não economia livre.
 
 **Impacto na área do chip:** `Cmem` pode encolher, mas **quem fixa a frequência é `Cfb`, e
 `Cfb` não pode encolher sem alterar o ganho f–I**. A área do neurônio continua dominada por
@@ -159,10 +192,12 @@ com o veredito, porque o motivo do descarte vale mais que o descarte.
    tolerâncias corrigidas a varredura de `Cmem` fica limpa (CV do ISI ~0,03%). O achado
    sobrevive: 16× de capacitor produz 24% de variação, contra os 1600% da intuição ingênua.
    Mas não é o cancelamento exato que a §3 afirmava — ver a reformulação lá.
-   ⚠️ **Ressalva nova, não fechada:** a curva é monotônica decrescente de 25 a 400 fF, mas
-   o ponto de 800 fF **sobe** de 140,0 para 151,0 Hz (+7,9%). Com CV intra-corrida de
-   0,03%, esse salto é ~260× o ruído: é estrutura real, não artefato, e não está explicada.
-   A descrição "monotônica decrescente e limpa" vale para 25–400 fF, não para a série toda.
+   ✅ **A subida em 800 fF está EXPLICADA e CONFIRMADA (2026-09-07).** Ela existe nos dois
+   modelos de dispositivo: ×1,079 no nível 1 e **×1,742 no sky130** — modelos que não
+   compartilham equações. **Causa: mudança de regime.** Quando a excursão da membrana cai
+   abaixo de ~0,2 V o circuito deixa de ser integra-e-dispara e vira oscilador de pequeno
+   sinal; o CV do ISI salta 26× e a frequência inverte de sentido. A hipótese registrada
+   estava certa, e agora tem confirmação independente.
 
 3. **RESOLVIDA — a curva é linear e passa pela origem.** A razão f/`Iin` fica entre 15,3 e
    16,04 Hz/pA ao longo de toda a faixa de 1 a 100 pA. Um ajuste de intercepto livre sobre
@@ -408,6 +443,7 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
 | 2026-09 | **Um chip homogêneo, replicado** — não chips especializados por modalidade | O gargalo real é a comunicação entre chips; a proporção entre modalidades é desconhecida e chips fixos a travam cedo demais; três máscaras custam três vezes mais. Mesma escolha de Loihi, SpiNNaker e Akida. Exceção legítima: a interface analógica de sensor é específica por modalidade e vai num chip pequeno separado. |
 | 2026-09 | **Topologia axon-hillock** (Mead, 1989), 7 transistores — **CONFIRMADA em 2026-09-06 com fome de corrente assimétrica no PMOS de ambos os estágios: 83,5 nW por neurônio, 151× abaixo da linha de base** | Base histórica validada; simples o bastante para ser entendida por inteiro antes de complicar. O consumo de 12,6 µW, que chegou a ameaçar a escolha, é corrigível dentro da própria topologia — não exige trocá-la. Fonte: `resultados/2026-09-06_espelho/espelho.md`. |
 | 2026-09-06 | **A fome de corrente é ASSIMÉTRICA: limita-se só o PMOS**, nunca os dois lados do inversor | A membrana opera entre 0,41 e 0,99 V, faixa em que M1p e M1n conduzem os dois sempre. O nível de `n1` é fixado pela **razão** entre as duas correntes. Grampear ambas ao mesmo IB destrói essa razão: nenhum lado vence, `n1` estaciona em ~0,83 V — dentro da janela de condução do 2º inversor — e o curto migra de estágio. Medido: fome simétrica dá 302 a 1 949 nW, **pior que as fontes ideais** (218 nW). A variante só-NMOS não dispara em 1 e 10 nA. |
+| 2026-09-07 (c) | **`Cmem` pequeno — decisão MANTIDA, motivo REESCRITO** | A razão antiga ("`Cmem` não controla a frequência") **foi refutada no PDK**: ele controla, 3,39× sobre 8×. A razão nova é mais forte: acima de ~200 fF a excursão cai abaixo de 0,2 V e o circuito sai do regime integra-e-dispara — CV do ISI piora 26×, o pulso perde excursão lógica e a frequência inverte de sentido. **Limite de projeto: `Cmem` ≤ 200 fF.** E `Cmem` passa a ser um botão de frequência utilizável, ao lado de `Iin`. Medido em `resultados/2026-09-07_cmem_sky130/`. |
 | 2026-09-07 (b) | **A faixa útil volta a `Iin` de 1 a 100 pA** — REVERTE a decisão da mesma data, abaixo | O teto de 50 pA vinha de a potência cruzar 100 nW em 54 pA, e **isso era artefato dos modelos nível 1**. No sky130 a potência fica entre 4,30 e 13,67 nW em toda a faixa de 1 a 100 pA — folga de **7,3×** contra o orçamento, sem cruzá-lo em ponto algum. Medido em `resultados/2026-09-07_migracao_sky130/`. A restrição de consumo desapareceu; a faixa volta a dois decades e o teto de frequência a 1,39 kHz. |
 | ~~2026-09-07 (a)~~ | ~~**A faixa útil do neurônio é `Iin` de 1 a 50 pA (f de 14 a 690 Hz)**~~ — **REVERTIDA** no mesmo dia pela linha acima |
 | 2026-09-06 | **O espelho do 2º estágio é largo (W = 5 µm, L = 1 µm)** | Um dispositivo estreito, de nA, rouba excursão do pulso de saída e o derruba para 81% de VDD, reprovando o critério de ≥ 90%. |
