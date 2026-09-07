@@ -5,6 +5,52 @@ valiosa que o descarte. Ordem cronológica inversa (mais recente no topo).
 
 ---
 
+## 2026-09-07 — Etapa 1 iniciada: PDK instalado e transistor isolado validado
+
+**Fonte:** [`resultados/2026-09-07_etapa1_pdk/validacao_pdk.md`](../resultados/2026-09-07_etapa1_pdk/validacao_pdk.md)
+— ngspice 42, sky130A, canto `tt`, 27 °C.
+
+**Instalação enxuta, medida antes de baixar.** Só os dois assets do volare que contêm o que
+o ngspice consome: `common` (16,6 MB, traz `libs.tech/ngspice/`) e `sky130_fd_pr` (14,0 MB,
+traz `libs.ref/sky130_fd_pr/spice/`). Deixados de fora 166,7 MB de células padrão, 54,2 MB de
+HVL, 50,7 MB de I/O e 30,3 MB de SRAM. Baixados 30,6 MB comprimidos contra ~380 MB do
+conjunto completo. `sky130B` (ReRAM) removido após a extração. **Ocupação final: 127 MB.**
+
+**A armadilha do W/L existe, mas é `fail-stop`, não `fail-silent`.** `W=1u L=0.15u` entrega
+1e-06 ao seletor de binning do BSIM4, que aborta com `could not find a valid modelname`.
+A forma correta é número puro em µm: `W=1 L=0.15`. Isso é melhor do que eu previa — a
+armadilha não pode contaminar resultado em silêncio.
+
+**Descoberta lateral: `.option scale=1u` é irrelevante pela via do `.lib`.** Está em
+`all.spice`, mas não na cadeia `sky130.lib.spice` → `corners/tt.spice`. Com números puros o
+resultado é idêntico com e sem. Registrado no `CLAUDE.md` §7 para não ser reintroduzido
+"por precaução" por alguém lendo o PDK de fora.
+
+**Placar das previsões pré-registradas (commit `a0ffaf6`, antes da medida): duas refutadas.**
+
+| Previsão | Veredito |
+|---|---|
+| A armadilha existe | confirmada |
+| A armadilha é silenciosa | **REFUTADA** — é erro fatal |
+| Id de 400 a 700 µA em W=1 L=0,15 | confirmada — 501,05 µA |
+| Fuga de 0,1 a 10 fA a 27 °C | **REFUTADA** — 84,7 fA, 8,5× acima |
+| Sem zona morta a 27 °C | sobrevive, com margem menor |
+| Zona morta de 1 a 10 pA a 125 °C | provavelmente subestimada — projeção agora dá 85 a 340 pA |
+
+As duas refutações são do mesmo tipo: subestimei a severidade nas duas direções. O cálculo
+de fuga errou porque assumi `n` ≈ 1,3; a inclinação medida de 91,3 mV/década implica
+`n` ≈ 1,53.
+
+**Consequência para a etapa 3, registrada agora para ser testada lá:** projetando 84,7 fA
+para 125 °C com duplicação a cada 8–10 °C, a fuga do `Mrst` vai a **85–340 pA** — acima de
+**toda** a faixa útil decidida hoje (1 a 50 pA). No canto quente o neurônio provavelmente não
+dispara em ponto algum. Isso torna o `Mrst` o dispositivo crítico do canto quente, somando-se
+ao papel dele de fixar a frequência (§5 item 4) e de caminho de descasamento (etapa 2).
+
+**O neurônio ainda não foi migrado.** Esta rodada validou a pré-condição.
+
+---
+
 ## 2026-09-07 — A curva f–I sobrevive; duas pendências fechadas, duas abertas
 
 **Fonte:** [`resultados/2026-09-07_fi_espelho/fi_espelho.md`](../resultados/2026-09-07_fi_espelho/fi_espelho.md)

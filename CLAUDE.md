@@ -24,7 +24,7 @@ compreensão de cena — nessas tarefas uma GPU comum é largamente superior.
 | Etapa | Descrição | Situação |
 |---|---|---|
 | 0 | Neurônio axon-hillock em ngspice, modelos nível 1 | **Concluída e revalidada.** Ressalvas numéricas fechadas (§5); **consumo resolvido** em 2026-09-06 (12,6 µW → 83,5 nW) e topologia confirmada. Pendências não bloqueantes em §5-A |
-| 1 | Migrar para PDK SkyWater 130 nm | **Próxima** — plano em revisão, não iniciada |
+| 1 | Migrar para PDK SkyWater 130 nm | **EM ANDAMENTO** desde 2026-09-07. PDK instalado (subconjunto ngspice, 127 MB, em `spice/models/sky130/`, fora do versionamento). Transistor isolado validado: `W`/`L` em µm puro, Id = 501,0 µA em W=1 L=0,15. **O neurônio ainda não foi migrado.** Ver `resultados/2026-09-07_etapa1_pdk/` |
 | 2 | Monte Carlo (descasamento) | Não iniciada — maior risco do projeto |
 | 3–10 | Cantos, par acoplado, coincidência, AER/FPGA, layout, tapeout | Não iniciadas |
 
@@ -297,6 +297,19 @@ corrigidos, qualquer resultado numérico é inválido. **Resultado produzido sem
 deve ser descartado, não interpretado.** Confirmado experimentalmente em 2026-09-06:
 tolerâncias padrão davam 20% de CV do ISI num circuito determinístico cujo valor correto é
 0,01%, e três frequências diferentes para o mesmo circuito.
+
+**sky130: `W` e `L` são número puro em micrômetros.** Nos subcircuitos do `sky130_fd_pr`,
+escreva `W=1 L=0.15`, **nunca** `W=1u L=0.15u`. A sintaxe com sufixo entrega 1e-06 ao
+seletor de binning do BSIM4, que **aborta** com `could not find a valid modelname`.
+Verificado em 2026-09-07: a falha é fatal e explícita, não silenciosa — não há risco de
+resultado contaminado, mas o netlist não roda. Referência de sanidade:
+`sky130_fd_pr__nfet_01v8` com `W=1 L=0.15` em Vgs = Vds = 1,8 V, canto `tt`, 27 °C, dá
+**501,0 µA**.
+
+**Não acrescentar `.option scale=1u` ao usar `.lib sky130.lib.spice`.** O `scale` está em
+`libs.tech/ngspice/all.spice`, mas não na cadeia do `.lib` → `corners/tt.spice`. Com números
+puros o resultado é idêntico com e sem ele (verificado: 501,05 µA nos dois casos). Pôr o
+`scale` "por precaução" não ajuda e confunde quem ler o netlist depois.
 
 **`.nodeset` obrigatório em netlist com espelho de corrente.** Com `uic`, o ngspice pula o
 ponto de operação DC e parte de 0 V em todo nó fora do `.ic`. O nó de referência de um

@@ -1,0 +1,22 @@
+* Curvas I-V do nfet_01v8 isolado - canto tt, 27 C
+* Uma fonte de dreno por dispositivo, para ler a corrente de cada um.
+.lib spice/models/sky130/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+Vg g 0 0
+Vb b 0 0
+Va da 0 1.8
+Vc dc 0 1.8
+Ve de 0 1.8
+Vf df 0 1.8
+Vh dh 0 1.8
+XW042 da g 0 b sky130_fd_pr__nfet_01v8 W=0.42 L=0.15
+XW1   dc g 0 b sky130_fd_pr__nfet_01v8 W=1    L=0.15
+XW2   de g 0 b sky130_fd_pr__nfet_01v8 W=2    L=0.15
+XL05  df g 0 b sky130_fd_pr__nfet_01v8 W=1    L=0.5
+XRST  dh g 0 b sky130_fd_pr__nfet_01v8 W=0.5  L=2
+.options abstol=1e-18 vntol=1e-9 reltol=1e-4 gmin=1e-16
+.control
+set filetype=ascii
+dc Vg 0 1.8 0.02
+wrdata resultados/2026-09-07_etapa1_pdk/raw/iv_vgs.txt i(Va) i(Vc) i(Ve) i(Vf) i(Vh)
+.endc
+.end
