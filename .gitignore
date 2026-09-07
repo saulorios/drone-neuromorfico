@@ -5,3 +5,6 @@ __pycache__/
 
 # PDK: multiplos GB, instalado localmente, nunca versionado
 spice/models/sky130*/
+
+# Saidas brutas volumosas do ngspice (netlists .cir sao versionados)
+resultados/*/raw/*.txt
