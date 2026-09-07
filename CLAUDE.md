@@ -328,11 +328,29 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
     Candidato: janela de histerese dependente de `Iin` — próximo critério de saída da etapa 1.
 
 15. **A junção de dreno do `Mrst` conduz DIRETO quando `mem` < 0**, injetando até **+3,7 pA**
-    em −0,127 V — 37% de `Iin` no ponto nominal e **370%** em `Iin` = 1 pA. O problema não é a
-    corrente: é que uma junção n+ diretamente polarizada **injeta portadores minoritários no
-    substrato**, o que é caminho de *latch-up* e de acoplamento entre neurônios vizinhos.
-    **Não está no mapa de riscos do dossiê §8 e precisa entrar.** É risco de isolamento, não
-    de consumo.
+    em −0,127 V — 37% de `Iin` no ponto nominal e **370%** em `Iin` = 1 pA.
+    **Raiz, e não é para mexer:** `mem` só desce abaixo do terra porque o **degrau de descida
+    de `out`** a puxa por `Cfb` depois que o reset termina. É a mesma física que produz o fator
+    de ~1,8× entre o modelo `T = Cfb·VDD/Iin` e o período real — o acoplamento capacitivo da
+    saída de volta à membrana é o mecanismo do circuito, não um defeito. **Não mexer.**
+    A injeção se divide em dois riscos, de pesos muito diferentes:
+
+15a. **Latch-up — risco BAIXO, vigiar em temperatura.** Os 3,7 pA estão ~9 ordens de grandeza
+     abaixo da corrente necessária para acionar a estrutura tiristor parasita. Não é
+     preocupação no estado atual. Reavaliar na etapa 3: a injeção é condução direta de junção
+     e cresce com a temperatura mais rápido que a fuga sub-limiar.
+
+15b. **Acoplamento por substrato entre neurônios vizinhos — risco ALTO.** E o motivo é
+     específico deste projeto: **o sinal também é da ordem de pA**. `Iin` vai de 1 a 100 pA, e
+     a injeção é de 3,7 pA. Diafonia de pA aqui não é ruído somado a um sinal grande — é
+     **sinal inteiro** chegando ao vizinho errado. Num chip com centenas de neurônios
+     replicados, cada disparo injeta no substrato compartilhado.
+     **Mitigação: anel de guarda, etapa 8.** E isso **custa área**, o que amarra esta
+     pendência a duas outras: à contagem de neurônios por chip (o ramo de referência do
+     espelho já impõe N ≥ 14, item 6) e à etapa 2, onde a decisão entre transistores maiores
+     e calibração individual já disputa a mesma área.
+     **Não está no mapa de riscos do dossiê §8 e precisa entrar** — como risco de isolamento,
+     não de consumo.
 
 16. **A medida DC de fuga não cobre `mem` de 0,45 a 0,562 V.** O disparo DC ocorre em 0,45 V;
     em operação a membrana chega a 0,562 V porque o degrau de `Cfb` a empurra além. Esse
