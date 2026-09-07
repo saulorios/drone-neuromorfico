@@ -1,0 +1,47 @@
+* ============================================================
+* NEURONIO ANALOGICO INTEGRA-E-DISPARA - Topologia Axon-Hillock
+* (Mead, 1989) - simulacao transiente
+* ============================================================
+* AVISO: modelos MOSFET genericos nivel 1, NAO o PDK SkyWater.
+* Serve para comportamento qualitativo e dimensionamento inicial.
+* Numeros absolutos mudarao com o PDK real.
+* Rodar a partir da raiz do projeto:  ngspice -b spice/neuronio.cir
+* ============================================================
+
+.param VDD_V = 1.8
+.param CMEM  = 100f
+.param CFB   = 20f
+.param IIN   = 10p
+
+Vdd vdd 0 {VDD_V}
+
+* --- Fonte de corrente de entrada (a "corrente sinaptica") ---
+Iin 0 mem DC {IIN}
+
+* --- Capacitor de membrana: integra a carga ---
+Cmem mem 0 {CMEM}
+
+* --- Amplificador: dois inversores em cascata (ganho alto) ---
+M1p n1  mem vdd vdd PMOS W=2u L=0.5u
+M1n n1  mem 0   0   NMOS W=1u L=0.5u
+M2p out n1  vdd vdd PMOS W=4u L=0.5u
+M2n out n1  0   0   NMOS W=2u L=0.5u
+
+* --- Capacitor de realimentacao: cria o feedback positivo (spike rapido) ---
+Cfb out mem {CFB}
+
+* --- Transistor de reset: descarrega a membrana (repolarizacao) ---
+Mrst mem out 0 0 NMOS W=0.5u L=2u
+
+* --- Carga de saida ---
+Cload out 0 5f
+
+.include spice/models/generic_l1.mod
+
+.control
+set filetype=ascii
+tran 5u 60m 0 5u
+wrdata resultados/out_tran.txt v(mem) v(out) v(n1)
+.endc
+
+.end

@@ -1,0 +1,7 @@
+# Artefatos temporarios de simulacao
+resultados/rodada_atual/
+*.raw
+__pycache__/
+
+# PDK: multiplos GB, instalado localmente, nunca versionado
+spice/models/sky130*/
