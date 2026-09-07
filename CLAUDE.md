@@ -24,7 +24,7 @@ compreensão de cena — nessas tarefas uma GPU comum é largamente superior.
 | Etapa | Descrição | Situação |
 |---|---|---|
 | 0 | Neurônio axon-hillock em ngspice, modelos nível 1 | **Concluída e revalidada.** Ressalvas numéricas fechadas (§5); **consumo resolvido** em 2026-09-06 (12,6 µW → 83,5 nW) e topologia confirmada. Pendências não bloqueantes em §5-A |
-| 1 | Migrar para PDK SkyWater 130 nm | **EM ANDAMENTO — não concluída.** Neurônio migrado em 2026-09-07 (canto `tt`, 27 °C): f–I reproduz o nível 1 (ganho 13,886 contra 13,794 Hz/pA, +0,7%), consumo **14× menor** (6,03 nW contra 85,4), **43,2 pJ por disparo**. O pulso **passa no critério funcional** (§7): aciona o receptor com margens de 0,894 e 0,730 V e estática de 0,44 pW. *O critério antigo de "≥ 90% de VDD" foi revogado em `fa20a70` — era arbitrário; o circuito nunca esteve errado.* **Faltam 3 critérios de saída:** fuga no nó `mem` medida diretamente, janela de histerese medida, e varredura de `Cmem` no sky130. Ver `resultados/2026-09-07_migracao_sky130/` e `2026-09-07_receptor/` |
+| 1 | Migrar para PDK SkyWater 130 nm | **EM ANDAMENTO — não concluída.** Neurônio migrado em 2026-09-07 (canto `tt`, 27 °C): f–I reproduz o nível 1 (ganho 13,886 contra 13,794 Hz/pA, +0,7%), consumo **14× menor** (6,03 nW contra 85,4), **43,2 pJ por disparo**. O pulso **passa no critério funcional** (§7): aciona o receptor com margens de 0,894 e 0,730 V e estática de 0,44 pW. *O critério antigo de "≥ 90% de VDD" foi revogado em `fa20a70` — era arbitrário; o circuito nunca esteve errado.* **Falta 1 critério de saída:** varredura de `Cmem` no sky130. (Fuga em `mem` e janela de histerese fechadas em 2026-09-07.) Ver `resultados/2026-09-07_migracao_sky130/` e `2026-09-07_receptor/` |
 | 2 | Monte Carlo (descasamento) | Não iniciada — maior risco do projeto |
 | 3–10 | Cantos, par acoplado, coincidência, AER/FPGA, layout, tapeout | Não iniciadas |
 
@@ -181,6 +181,14 @@ com o veredito, porque o motivo do descarte vale mais que o descarte.
    **Consequência para a etapa 2:** existe um caminho direto de descasamento de `Mrst` para
    dispersão de frequência entre neurônios, que **não está no mapa de riscos do dossiê §8**.
    `Mrst` passa a ser um dispositivo crítico de casamento, ao lado de `Cfb`.
+   **FECHADA em 2026-09-07 — a janela foi MEDIDA** (`resultados/2026-09-07_histerese/`), com
+   `Ctot` medido pela inclinação da rampa e não suposto: janela de **0,6792 V** contra os
+   0,2759 V do modelo `VDD·Cfb/Ctot` — **fator 2,46×**; contra 0,2489 V usando a excursão real
+   de `out`, **2,73×**. Em período, **1,99×** no sky130 contra 1,76× no nível 1. O fator
+   sobrevive ao PDK e é maior.
+   **E a razão entre os dois números está explicada:** a rampa percorre só **0,5490 V** dos
+   0,6792 V da janela. A diferença, 0,1303 V, **é o undershoot** (0,128 V medido) — trecho que
+   não é integrado por `Iin`, e sim atravessado depressa pela injeção de junção do item 15.
 
 5. **CONFIRMADA — era `abstol`, e também `trtol`.** A hipótese está validada: as tolerâncias
    padrão do ngspice invalidavam os três itens acima de uma vez. `trtol` (padrão 7) pesa
@@ -320,12 +328,22 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
     que desloca os cruzamentos para temperatura mais alta. Não recalculada: depende da faixa
     térmica ainda indefinida (item 13).
 
-14. **A curvatura da curva f–I em corrente baixa está SEM EXPLICAÇÃO.** O ponto de 1 pA fica
-    2,5% abaixo de uma reta proporcional. Eu havia atribuído isso a 25,3 fA de fuga; a medida
-    direta de 2026-09-07 **refuta a atribuição**: sobre a excursão real a fuga produz
-    **+1,7%**, para cima, não para baixo. O efeito líquido é uma *ajuda*, porque a injeção de
-    junção abaixo de `mem` = 0 mais que compensa a fuga acima. A causa da curvatura é outra.
-    Candidato: janela de histerese dependente de `Iin` — próximo critério de saída da etapa 1.
+14. **A curvatura da curva f–I em corrente baixa está SEM EXPLICAÇÃO, com DUAS hipóteses já
+    derrubadas por medida direta.** O ponto de 1 pA fica 2,53% abaixo de uma reta proporcional.
+    - **Hipótese 1, fuga — REFUTADA** (2026-09-07): sobre a excursão real a fuga produz
+      **+1,62%**, para cima. A injeção de junção abaixo de `mem` = 0 mais que compensa a fuga
+      acima, e o efeito líquido é uma *ajuda*.
+    - **Hipótese 2, janela de histerese variável — REFUTADA** (2026-09-07): medida da forma de
+      onda, a janela varia **−0,21%** em 1 pA contra os **+4,15%** necessários, e no **sentido
+      oposto** — ela cresce com `Iin`, não com a lentidão.
+    - **`Ctot` também está descartado:** parecia variar +5,70%, mas isso era a fuga disfarçada
+      na medida `Ctot = Iin/(dV/dt)`. `Ctot` real é constante: **129,71 fF, espalhamento
+      0,05%** sobre dois decades.
+    Um modelo montado das três grandezas medidas (janela, `Ctot`, curva de fuga) reproduz a
+    **frequência absoluta dentro de 3,4%** mas prevê a curvatura em **+1,62%** contra os
+    **−2,53%** medidos — **erra o sinal**, por 4,15 pontos percentuais.
+    **Candidato ainda não testado:** que os −2,53% estejam dentro da barra de erro do próprio
+    ajuste da f–I e não sejam efeito físico. A incerteza daquele ajuste nunca foi calculada.
 
 15. **A junção de dreno do `Mrst` conduz DIRETO quando `mem` < 0**, injetando até **+3,7 pA**
     em −0,127 V — 37% de `Iin` no ponto nominal e **370%** em `Iin` = 1 pA.
