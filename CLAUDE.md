@@ -126,7 +126,8 @@ ngspice 42, 12 pontos de 1 a 100 pA).
 | Resíduo máximo | 2,73% | no ponto de 1 pA; os outros 11 dentro de ±1,17% |
 | Deriva de f/`Iin` | **0,7%** | ao longo de dois decades. Linha de base: 5% — a linearidade **melhorou** |
 | Potência no ponto nominal | **85,4 nW** | medida sobre ciclos inteiros; era 87,5 nW com janela bruta |
-| Potência na faixa 1–100 pA | 80,5 a **112,4 nW** | ⚠️ **cruza os 100 nW em `Iin` ≈ 54 pA** (f ≈ 745 Hz) |
+| **Faixa de validade do orçamento** | **`Iin` de 1 a 50 pA → f de 14 a 690 Hz** | decidido em 2026-09-07 (§6). Nessa faixa a potência vai de 80,5 a 99,1 nW e o orçamento de 100 nW é respeitado em todos os pontos |
+| Potência acima da faixa | 104,2 nW em 70 pA; 112,4 nW em 100 pA | ⚠️ **fora de validade** — o orçamento cruza os 100 nW em `Iin` ≈ 54 pA (f ≈ 745 Hz) |
 | Ramo de referência do espelho | **5,42 µW** | ⚠️ fora do orçamento por neurônio; exige **N ≥ 370 neurônios** para amortizar dentro de 100 nW |
 
 ---
@@ -180,6 +181,27 @@ com o veredito, porque o motivo do descarte vale mais que o descarte.
 
 ---
 
+### Observação de leitura — o que os 85,4 nW significam, e o que não significam
+
+**O neurônio continua dominado por consumo estático.** Dos 85,4 nW do ponto nominal,
+**~80,9 nW são piso estático** e apenas **~4,5 nW acompanham a atividade** — 5,2% do total.
+O ajuste na faixa útil dá `P = 0,406·Iin + 80,9 nW`, com `Iin` em pA. Em 1 pA, a menor
+corrente medida, o neurônio já consome 94% do que consome no ponto nominal.
+
+**Consequência para a leitura do dossiê.** A Parte 1 afirma que um sistema baseado em
+eventos "não gasta energia quando nada acontece". Essa afirmação **segue qualitativamente
+falsa** para este circuito, agora num patamar 150× menor. O que mudou foi a magnitude, não
+o mecanismo: o neurônio não é um dispositivo orientado a evento, é um dispositivo de piso
+estático com uma pequena modulação por atividade.
+
+**Passa em números absolutos; não passa como descrição do mecanismo.** O argumento de
+consumo do projeto deve ser reescrito em termos de "piso estático baixo o bastante", não de
+"consumo proporcional à atividade" — são justificativas diferentes, com implicações
+diferentes para a arquitetura. Um chip com N neurônios ociosos gasta `N × 80,9 nW`, e isso
+escala com a contagem de neurônios, não com a taxa de eventos.
+
+---
+
 ## 5-A · Ressalvas ABERTAS
 
 **O bloqueio de consumo está resolvido.** A ressalva que dizia "o consumo inviabiliza a
@@ -199,11 +221,18 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
 4. **A margem de 1,2× é estreita e o ponto ótimo é uma ilha.** `IB2` = 1 µA reprova no pulso
    (83,1% de VDD), `IB2` = 3 µA aprova (92,2%). A vizinhança entre 1 e 3 µA não foi mapeada.
 5. **Nível 1, sem sub-limiar, sem descasamento, sem parasitas** — como sempre.
-6. **O ramo de referência do espelho custa 5,42 µW**, 63× o consumo do neurônio. É legítimo
-   mantê-lo fora do orçamento por ser compartilhado, mas **por quantos neurônios nunca foi
-   dito**. Para o total por neurônio ficar em 100 nW são necessários **N ≥ 370**. Abaixo
-   disso o número de 85,4 nW não descreve o chip. Requisito de arquitetura novo, levantado
-   em 2026-09-07.
+6. **DIFERIDA para depois da migração — ramo de referência do espelho.** Custa **5,42 µW**
+   medidos, 63× o consumo do neurônio, exigindo **N ≥ 370** neurônios para amortizar dentro
+   de 100 nW.
+   **Causa identificada:** o espelho é **1:1**, razão que tive de assumir porque o relatório
+   do espelho não a especificou. É omissão da documentação, não escolha de projeto.
+   **Direção da solução, não simulada:** espelho **com razão** — referência em 100 nA e
+   dispositivo de saída ~30× mais largo, entregando os mesmos 3 µA ao 2º estágio. O ramo cai
+   para a ordem de **200 nW** (198 nW pela conta de 10 nA + 100 nA a 1,8 V; a estimativa do
+   autor é 216 nW) e o requisito desaba de 370 para **~15 neurônios**.
+   **Por que fica diferida:** dimensionar um espelho com razão em regime de nA é projeto de
+   polarização que o nível 1 não modela — é o mesmo motivo da pendência 3. Só faz sentido
+   depois da etapa 1. **Não simular antes do PDK.**
 7. **O orçamento de 100 nW não vale em toda a faixa útil.** A potência cresce com `Iin` e
    cruza os 100 nW em ≈ 54 pA (f ≈ 745 Hz), enquanto a faixa declarada vai a 100 pA. O
    critério foi enunciado no ponto nominal e lá passa; na faixa toda, não. Critério e faixa
@@ -229,6 +258,7 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
 | 2026-09 | **Um chip homogêneo, replicado** — não chips especializados por modalidade | O gargalo real é a comunicação entre chips; a proporção entre modalidades é desconhecida e chips fixos a travam cedo demais; três máscaras custam três vezes mais. Mesma escolha de Loihi, SpiNNaker e Akida. Exceção legítima: a interface analógica de sensor é específica por modalidade e vai num chip pequeno separado. |
 | 2026-09 | **Topologia axon-hillock** (Mead, 1989), 7 transistores — **CONFIRMADA em 2026-09-06 com fome de corrente assimétrica no PMOS de ambos os estágios: 83,5 nW por neurônio, 151× abaixo da linha de base** | Base histórica validada; simples o bastante para ser entendida por inteiro antes de complicar. O consumo de 12,6 µW, que chegou a ameaçar a escolha, é corrigível dentro da própria topologia — não exige trocá-la. Fonte: `resultados/2026-09-06_espelho/espelho.md`. |
 | 2026-09-06 | **A fome de corrente é ASSIMÉTRICA: limita-se só o PMOS**, nunca os dois lados do inversor | A membrana opera entre 0,41 e 0,99 V, faixa em que M1p e M1n conduzem os dois sempre. O nível de `n1` é fixado pela **razão** entre as duas correntes. Grampear ambas ao mesmo IB destrói essa razão: nenhum lado vence, `n1` estaciona em ~0,83 V — dentro da janela de condução do 2º inversor — e o curto migra de estágio. Medido: fome simétrica dá 302 a 1 949 nW, **pior que as fontes ideais** (218 nW). A variante só-NMOS não dispara em 1 e 10 nA. |
+| 2026-09-07 | **A faixa útil do neurônio é `Iin` de 1 a 50 pA (f de 14 a 690 Hz)** | Acima de ~54 pA o consumo excede os 100 nW do orçamento (104,2 nW em 70 pA, 112,4 nW em 100 pA). Em vez de afrouxar o alvo de potência ou buscar outro ponto de polarização, limita-se a faixa. Consequência: a faixa útil encolhe de dois decades para 1,7, e o teto de frequência cai de 1,38 kHz para 690 Hz. Medida em `resultados/2026-09-07_fi_espelho/fi_espelho.md`. |
 | 2026-09-06 | **O espelho do 2º estágio é largo (W = 5 µm, L = 1 µm)** | Um dispositivo estreito, de nA, rouba excursão do pulso de saída e o derruba para 81% de VDD, reprovando o critério de ≥ 90%. |
 | 2026-09 | **Controle de voo não aprende** — software maduro existente (PX4 / ArduPilot) | Se a camada que estabiliza o drone aprender errado, o drone cai. Plasticidade só onde o erro custa um alarme falso. |
 | 2026-09 | **Plasticidade modulada por surpresa** | Resolve dois problemas de uma vez: esquecimento catastrófico (quase nada é gravado) e correlações espúrias (ocorrem em momentos calmos, com plasticidade fechada). |
