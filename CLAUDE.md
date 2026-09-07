@@ -431,6 +431,18 @@ a simulação **aborta**: `Timestep too small; initial timepoint: trouble with n
 Confirmado em 2026-09-07. Calcule o palpite, não arbitre — para PMOS em ligação diodo,
 `V(rp) = VDD − (|VTO| + √(2·IB/(KP·W/L)))`.
 
+**Corrente estática se mede por ponto de operação DC, nunca por média de transiente.**
+O critério de convergência de um ramo é `reltol·|I| + abstol`, e o `|I|` que manda é o **maior
+valor que aquele ramo carrega**, não o que se quer medir. Um ramo que conduz 2,9 µA nas
+transições tem resolução efetiva de ~290 pA com `reltol` = 1e-4, mesmo com `abstol` em 1 fA.
+Medido em 2026-09-07: a estática de um inversor receptor deu **0,1325 pA** em DC e
+**1 607 pA** no transiente — **12 128×** de diferença, caindo para 428 pA ao apertar `vntol`.
+Sinais de que o número é piso do solver e não do circuito: o nó de saída assenta alguns nV
+**acima do trilho**; a corrente fica constante com desvio padrão da mesma ordem da média; e a
+razão tensão/corrente não corresponde a condutância alguma do netlist. **Este é o erro
+fundador do projeto um nível abaixo** — lá era o `abstol` em relação ao sinal, aqui é o
+`reltol` em relação ao pico do ramo.
+
 **Potência: integrar sobre número INTEIRO de ciclos.** Descartar 20% e integrar o resto
 deixa um ciclo parcial na janela, e a sobra produz espalhamento da ordem de 1/N — o
 bastante para gerar uma curva de potência não-monotônica que não é física. Integrar entre

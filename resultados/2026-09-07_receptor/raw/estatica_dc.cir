@@ -1,0 +1,14 @@
+* Corrente ESTATICA do inversor receptor: out forcado, varredura DC
+.lib spice/models/sky130/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+.temp 27
+VddL vddL 0 1.8
+Vin  out 0 0
+XRp outr out vddL vddL sky130_fd_pr__pfet_01v8 W=2 L=0.5
+XRn outr out 0    0    sky130_fd_pr__nfet_01v8 W=1 L=0.5
+.options abstol=1e-18 vntol=1e-9 reltol=1e-4 gmin=1e-16
+.control
+set filetype=ascii
+dc Vin 0 1.8 0.005
+wrdata resultados/2026-09-07_receptor/raw/estatica_dc.txt i(VddL) v(outr)
+.endc
+.end
