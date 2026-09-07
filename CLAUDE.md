@@ -202,6 +202,36 @@ escala com a contagem de neurônios, não com a taxa de eventos.
 
 ---
 
+### Ressalva ABERTA — a tesoura: teto de consumo e piso de fuga se aproximam
+
+**Isto é ressalva, não conclusão.** Dois limites independentes fecham sobre a faixa útil por
+cima e por baixo, e ninguém verificou onde eles se cruzam.
+
+**O teto vem do consumo, e está medido.** A potência cresce com `Iin` e cruza os 100 nW em
+`Iin` ≈ 54 pA. Foi por isso que a faixa útil ficou em 1 a 50 pA (§6). É medida em nível 1.
+
+**O piso vem da fuga do `Mrst`, e sobe com a temperatura.** Medido em sky130: 84,7 fA a
+27 °C, com `Vds` = 1,8 V (limite superior — ver
+`resultados/2026-09-07_etapa1_pdk/validacao_pdk.md`). Projetando por regra de bolso
+(duplicação a cada 8–10 °C):
+
+| a fuga cruza | duplicações | a 8 °C/dup | a 10 °C/dup |
+|---|---|---|---|
+| 1 pA (o piso da faixa útil) | 3,6 | **55 °C** | **63 °C** |
+| 10 pA | 6,9 | 82 °C | 96 °C |
+| 50 pA (o teto da faixa útil) | 9,2 | **101 °C** | **119 °C** |
+
+Em torno de **60 °C** a fuga iguala a menor corrente da faixa útil; em torno de **110 °C**
+iguala a maior. Entre os dois, a faixa útil é comida por baixo enquanto o consumo já a
+limitava por cima.
+
+**É extrapolação, não medida.** Regra de bolso aplicada a um único ponto de 27 °C, medido
+num transistor isolado, em `Vds` acima da condição de operação, com o neurônio ainda não
+migrado. O PDK tem os modelos de temperatura e pode responder direto — é matéria da etapa 3.
+Registrado aqui para que a etapa 3 comece sabendo o que procurar, **não** como resultado.
+
+---
+
 ## 5-A · Ressalvas ABERTAS
 
 **O bloqueio de consumo está resolvido.** A ressalva que dizia "o consumo inviabiliza a
@@ -228,8 +258,11 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
    do espelho não a especificou. É omissão da documentação, não escolha de projeto.
    **Direção da solução, não simulada:** espelho **com razão** — referência em 100 nA e
    dispositivo de saída ~30× mais largo, entregando os mesmos 3 µA ao 2º estágio. O ramo cai
-   para a ordem de **200 nW** (198 nW pela conta de 10 nA + 100 nA a 1,8 V; a estimativa do
-   autor é 216 nW) e o requisito desaba de 370 para **~15 neurônios**.
+   para **198 nW** (= (10 nA + 100 nA) × 1,8 V) e o requisito desaba de 370 para **N ≥ 14**
+   neurônios (198 nW ÷ 14,6 nW de folga por neurônio).
+   *Correção de 2026-09-07:* a primeira estimativa dizia 216 nW e N ≈ 15. Vinha de contar um
+   espelho de NMOS que a variante assimétrica eliminou — a fome é só no PMOS. Erro do autor
+   do projeto, corrigido aqui.
    **Por que fica diferida:** dimensionar um espelho com razão em regime de nA é projeto de
    polarização que o nível 1 não modela — é o mesmo motivo da pendência 3. Só faz sentido
    depois da etapa 1. **Não simular antes do PDK.**
@@ -248,6 +281,17 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
 8. **O ponto de 800 fF da varredura de `Cmem`** (§5 item 2) não está explicado.
 9. **Divergência de 11% na potência da linha de base entre ngspice 41 e 42**, não separada.
    Ver a convenção de registrar versão em §7.
+
+10. **PERGUNTA DE REQUISITO, EM ABERTO — qual é a faixa térmica real deste projeto?**
+    Os −40 °C e 125 °C que a etapa 3 do dossiê usa **nunca foram justificados**. São a faixa
+    automotiva, herdada por convenção, não derivada da aplicação. Um drone de busca e resgate
+    com um chip abaixo de 1 mW dificilmente chega a 125 °C de junção.
+    **Por que importa agora:** a tesoura (§5) diz que a faixa útil sobrevive a 27 °C e
+    provavelmente não sobrevive a 125 °C. Se o requisito real for, digamos, −10 a 60 °C, o
+    problema muda de natureza — deixa de ser bloqueante e vira margem. Se for mesmo 125 °C, o
+    `Mrst` precisa ser reprojetado antes de qualquer outra coisa.
+    **Não respondida aqui.** É decisão do autor do projeto e **pré-requisito da etapa 3** —
+    definir os cantos antes de simulá-los, e não o contrário.
 
 ---
 

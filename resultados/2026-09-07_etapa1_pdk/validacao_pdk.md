@@ -116,9 +116,14 @@ O cálculo que fiz subestimou porque usei `V_th` de canal longo entre 0,5 e 0,7 
 inclinação medida de 91,3 mV/década implica `n` ≈ 1,53, maior que o 1,3 que assumi, e o
 `V_th` efetivo do `Mrst` é menor do que supus.
 
-**Ressalva que atenua:** a medida é em `Vds = 1,8 V`. No circuito, o dreno de `Mrst` é o nó
-`mem`, que opera entre −0,11 e 0,56 V. Com `Vds` menor há menos DIBL e a fuga real é
-**menor** que 84,7 fA. O valor medido é um **limite superior**, não a fuga de operação.
+**Ressalva que atenua, com a procedência do número:** a medida é em `Vds = 1,8 V`. No
+circuito, o dreno de `Mrst` é o nó `mem`. A faixa de operação de `mem` de que disponho é
+**−0,114 a 0,562 V**, medida em `resultados/2026-09-07_fi_espelho/`, no ponto nominal
+(`IB1` = 10 nA, `IB2` = 3 µA, `Iin` = 10 pA) — **com modelos nível 1**, não com o sky130.
+**O neurônio ainda não foi migrado**, então essa faixa é o melhor palpite disponível e não
+uma condição de operação medida no PDK. Se ela se mantiver, `Vds` menor significa menos
+DIBL e fuga real **menor** que 84,7 fA, fazendo do valor medido um **limite superior**. Se a
+migração mudar a faixa de operação da membrana, esta ressalva precisa ser refeita.
 
 ### O que isso faz com a previsão de zona morta
 
