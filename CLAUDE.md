@@ -23,7 +23,7 @@ compreensão de cena — nessas tarefas uma GPU comum é largamente superior.
 
 | Etapa | Descrição | Situação |
 |---|---|---|
-| 0 | Neurônio axon-hillock em ngspice, modelos nível 1 | **Concluída e revalidada** em 2026-09-06. Ressalvas numéricas fechadas (§5); ressalva de consumo ABERTA e bloqueante (§5-A) |
+| 0 | Neurônio axon-hillock em ngspice, modelos nível 1 | **Concluída e revalidada.** Ressalvas numéricas fechadas (§5); **consumo resolvido** em 2026-09-06 (12,6 µW → 83,5 nW) e topologia confirmada. Pendências não bloqueantes em §5-A |
 | 1 | Migrar para PDK SkyWater 130 nm | **Próxima** — plano em revisão, não iniciada |
 | 2 | Monte Carlo (descasamento) | Não iniciada — maior risco do projeto |
 | 3–10 | Cantos, par acoplado, coincidência, AER/FPGA, layout, tapeout | Não iniciadas |
@@ -104,6 +104,17 @@ T = 27 °C nominal.
 | Variação de f com `Wrst` | 2,3× | `Wrst` variado 32× (0,25 → 8 µm). **`Mrst` fixa a frequência** |
 | Deriva com alimentação | 18% pico-a-pico | ⚠️ **não revalidado** — número de tolerância padrão, tratar como descartado até refazer |
 
+**Com fome de corrente assimétrica no PMOS dos dois estágios** (fonte: `resultados/2026-09-06_espelho/espelho.md`, ngspice 42). Denominador comum: `IB1` = 10 nA, `IB2` = 3 µA, `Iin` = 10 pA, demais parâmetros no nominal acima.
+
+| Grandeza | Valor | Denominador / condição |
+|---|---|---|
+| Potência por neurônio | **83,5 nW** | soma dos dois estágios; **exclui o ramo de referência do espelho**, que é compartilhado entre neurônios num chip real |
+| Energia por disparo | **0,60 nJ** | = 83,5 nW ÷ 138,3 Hz. Era 78 nJ na linha de base |
+| Frequência de disparo | **138,3 Hz** | contra 160,3 Hz da linha de base: desvio de 14% |
+| Redução de potência | 151× | denominador = linha de base revalidada, 12,6 µW |
+| CV do ISI | 0,0050% | dentro de uma corrida |
+| Pulso de saída | 92,2% de VDD | critério: ≥ 90% |
+
 ---
 
 ## 5 · Estado das ressalvas da etapa 0 — resolvidas em 2026-09-06
@@ -155,36 +166,37 @@ com o veredito, porque o motivo do descarte vale mais que o descarte.
 
 ---
 
-## 5-A · Ressalvas ABERTAS (o que a revalidação não fechou)
+## 5-A · Ressalvas ABERTAS
 
-1. **O consumo inviabiliza a topologia como está.** 12,6 µW por neurônio, **7 × 10⁵ vezes**
-   a potência do sinal, 78 nJ por disparo contra 1–100 pJ na literatura — ~10⁶ acima.
-   Mecanismo confirmado por cálculo à mão e por medida: a membrana oscila entre 0,41 e
-   0,99 V; com `VTO` = 0,45 V e VDD = 1,8 V, o NMOS do primeiro inversor conduz acima de
-   0,45 V e o PMOS conduz abaixo de 1,35 V. **A faixa inteira de operação da membrana está
-   dentro da janela em que os dois conduzem.** O inversor não atravessa a região de
-   transição — ele nunca sai dela. Corrente de curto-circuito prevista a meia rampa:
-   7,5 µA; medida: 7,1 µA. É isso que torna o consumo independente de `Iin`.
-   **Mitigação testada e insuficiente:** enfraquecer o primeiro inversor funciona (189× de
-   redução para 100× de enfraquecimento) mas exigiria `W` = 10 nm — não fabricável; o
-   mínimo do `nfet_01v8` no sky130 é `W` = 0,42 µm, e manter W/L pediria `L` ≈ 21 µm, área
-   proibitiva. **O caminho viável é limitar a corrente do inversor** (inversor com fome de
-   corrente) **ou trocar de topologia.** Decisão pendente: a §6 ainda registra a topologia
-   axon-hillock como decisão travada, e este resultado é motivo novo para reabri-la.
-   **Não reaberta unilateralmente** — aguarda decisão do autor do projeto.
+**O bloqueio de consumo está resolvido.** A ressalva que dizia "o consumo inviabiliza a
+topologia" foi fechada em 2026-09-06: 12,6 µW → **83,5 nW** com fome de corrente assimétrica
+no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue aberto:
 
-2. **A deriva de 18% com VDD não foi revalidada.** É número de tolerância padrão; pela
-   lição do item 1 da §5, deve ser tratado como descartado, não como aproximado.
+### Do experimento do espelho (`resultados/2026-09-06_espelho/espelho.md`)
 
-3. **O CV de 5,8% em 4 dos 12 pontos da varredura de `Iin`** não foi investigado. Suspeita
-   registrada na revalidação: artefato do detector de disparo (12 disparos, efeito de
-   borda), não do circuito.
+1. **A curva f–I não foi refeita no ponto de operação novo.** Sem ela não se sabe se a
+   linearidade e a passagem pela origem sobrevivem a `IB1` = 10 nA, `IB2` = 3 µA. É o item
+   que falta para o critério de aceitação completo.
+2. **Sem estudo de convergência nesse ponto.** Os pontos com `IB2` na casa de µA precisaram
+   de `.nodeset` para convergir; sem ele, `Timestep too small` no nó de referência.
+3. **As dimensões do espelho em nA são fictícias no nível 1.** W/L = 0,05 entrega 10 nA no
+   modelo com Vov ≈ 0,09 V, mas 90 mV de sobretensão é inversão moderada, que o nível 1
+   trata como lei quadrática — errado. O **comportamento** de limitador está correto; o
+   **dimensionamento** do circuito de polarização só pode ser projetado com o PDK.
+4. **A margem de 1,2× é estreita e o ponto ótimo é uma ilha.** `IB2` = 1 µA reprova no pulso
+   (83,1% de VDD), `IB2` = 3 µA aprova (92,2%). A vizinhança entre 1 e 3 µA não foi mapeada.
+5. **Nível 1, sem sub-limiar, sem descasamento, sem parasitas** — como sempre.
 
-4. **O ponto de 800 fF da varredura de `Cmem`** (item 2 acima) não está explicado.
+### Herdadas
 
-5. **Tudo continua em modelos nível 1**, sem condução sub-limiar. O consumo em sky130 pode
-   diferir em magnitude, mas o mecanismo de curto-circuito é estrutural e não some com a
-   troca de modelos.
+6. **A deriva de 18% com VDD não foi revalidada.** É número de tolerância padrão; pela lição
+   do item 1 da §5, deve ser tratado como descartado, não como aproximado. E foi medido na
+   topologia sem fome de corrente — provavelmente não vale mais.
+7. **O CV de 5,8% em 4 dos 12 pontos da varredura de `Iin`** (revalidação) não foi
+   investigado. Suspeita: artefato do detector de disparo, não do circuito.
+8. **O ponto de 800 fF da varredura de `Cmem`** (§5 item 2) não está explicado.
+9. **Divergência de 11% na potência da linha de base entre ngspice 41 e 42**, não separada.
+   Ver a convenção de registrar versão em §7.
 
 ---
 
@@ -193,7 +205,9 @@ com o veredito, porque o motivo do descarte vale mais que o descarte.
 | Data | Decisão | Motivo |
 |---|---|---|
 | 2026-09 | **Um chip homogêneo, replicado** — não chips especializados por modalidade | O gargalo real é a comunicação entre chips; a proporção entre modalidades é desconhecida e chips fixos a travam cedo demais; três máscaras custam três vezes mais. Mesma escolha de Loihi, SpiNNaker e Akida. Exceção legítima: a interface analógica de sensor é específica por modalidade e vai num chip pequeno separado. |
-| 2026-09 | **Topologia axon-hillock** (Mead, 1989), 7 transistores | Base histórica validada; simples o bastante para ser entendida por inteiro antes de complicar. |
+| 2026-09 | **Topologia axon-hillock** (Mead, 1989), 7 transistores — **CONFIRMADA em 2026-09-06 com fome de corrente assimétrica no PMOS de ambos os estágios: 83,5 nW por neurônio, 151× abaixo da linha de base** | Base histórica validada; simples o bastante para ser entendida por inteiro antes de complicar. O consumo de 12,6 µW, que chegou a ameaçar a escolha, é corrigível dentro da própria topologia — não exige trocá-la. Fonte: `resultados/2026-09-06_espelho/espelho.md`. |
+| 2026-09-06 | **A fome de corrente é ASSIMÉTRICA: limita-se só o PMOS**, nunca os dois lados do inversor | A membrana opera entre 0,41 e 0,99 V, faixa em que M1p e M1n conduzem os dois sempre. O nível de `n1` é fixado pela **razão** entre as duas correntes. Grampear ambas ao mesmo IB destrói essa razão: nenhum lado vence, `n1` estaciona em ~0,83 V — dentro da janela de condução do 2º inversor — e o curto migra de estágio. Medido: fome simétrica dá 302 a 1 949 nW, **pior que as fontes ideais** (218 nW). A variante só-NMOS não dispara em 1 e 10 nA. |
+| 2026-09-06 | **O espelho do 2º estágio é largo (W = 5 µm, L = 1 µm)** | Um dispositivo estreito, de nA, rouba excursão do pulso de saída e o derruba para 81% de VDD, reprovando o critério de ≥ 90%. |
 | 2026-09 | **Controle de voo não aprende** — software maduro existente (PX4 / ArduPilot) | Se a camada que estabiliza o drone aprender errado, o drone cai. Plasticidade só onde o erro custa um alarme falso. |
 | 2026-09 | **Plasticidade modulada por surpresa** | Resolve dois problemas de uma vez: esquecimento catastrófico (quase nada é gravado) e correlações espúrias (ocorrem em momentos calmos, com plasticidade fechada). |
 | 2026-09 | **`Cmem` pequeno** | Etapa 0, §3: `Cmem` não compra frequência e custa excursão de sinal. |
@@ -296,6 +310,16 @@ deste repositório — código, gráfico, commit ou comentário.
 
 ## 9 · O que NÃO fazer (erros já cometidos ou descartados)
 
+- **Não aplicar fome de corrente simétrica** (limitar os dois lados do inversor com o mesmo
+  IB). Descartado em 2026-09-06 com medida: dá 302 a 1 949 nW, **pior que as fontes ideais**
+  (218 nW) e 3,6× a 23× pior que a assimétrica (83,5 nW). Motivo: na faixa em que a membrana
+  opera (0,41–0,99 V) os dois transistores conduzem sempre, e o nível de `n1` é fixado pela
+  **razão** entre as correntes. Grampear ambas ao mesmo valor destrói a razão, `n1` estaciona
+  em ~0,83 V dentro da janela de condução do estágio seguinte, e o curto-circuito migra de
+  estágio em vez de desaparecer. Limitar **só o PMOS**. A variante só-NMOS também está
+  descartada: não dispara em 1 e 10 nA.
+- **Não usar espelho estreito no 2º estágio.** Um dispositivo de nA rouba excursão do pulso e
+  derruba a saída para 81% de VDD. W = 5 µm, L = 1 µm.
 - **Não rodar ngspice sem o bloco `.options` de tolerância.** Ver §7. O resultado não é
   "aproximado" nem "com ruído": é inválido, e deve ser descartado em vez de interpretado.
   Este erro já custou a etapa 0 inteira — três meses de números que tiveram que ser

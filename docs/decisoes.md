@@ -5,6 +5,60 @@ valiosa que o descarte. Ordem cronológica inversa (mais recente no topo).
 
 ---
 
+## 2026-09-06 — Consumo resolvido; a topologia axon-hillock FICA
+
+**Fonte:** [`resultados/2026-09-06_espelho/espelho.md`](../resultados/2026-09-06_espelho/espelho.md)
+— ngspice 42, modelos nível 1 inalterados.
+
+**O que mudou:** o consumo de 12,6 µW por neurônio, que era a ressalva bloqueante da §5-A e
+ameaçava a escolha de topologia, caiu para **83,5 nW** — redução de **151×**. Energia por
+disparo: 78 nJ → **0,60 nJ**. A decisão de arquitetura está tomada pelo autor do projeto:
+**a topologia axon-hillock fica.** A marca de revisão sai do `CLAUDE.md` §6.
+
+**Por quê:** o problema nunca foi a topologia, foi o inversor operar permanentemente dentro
+da janela de curto-circuito. Isso é corrigível **dentro** da própria topologia, limitando a
+corrente do inversor — não exige trocá-la.
+
+**A decisão de projeto nova, e é a parte não-óbvia: a fome de corrente é ASSIMÉTRICA.**
+Limita-se só o PMOS, nunca os dois lados. A membrana opera entre 0,41 e 0,99 V, faixa em que
+M1p e M1n conduzem os dois, sempre; o nível de `n1` é fixado pela **razão** entre as duas
+correntes. Grampear ambas ao mesmo IB destrói essa razão — nenhum lado vence, `n1` estaciona
+em ~0,83 V, dentro da janela de condução do estágio seguinte, e o curto **migra** do 1º para
+o 2º inversor em vez de desaparecer. É o mesmo mecanismo do problema original, deslocado um
+estágio adiante.
+
+| variante | potência total | veredito |
+|---|---|---|
+| linha de base (sem fome) | 12 600 nW | — |
+| fontes de corrente ideais | 218 nW | testbench inválido (viola trilhos) |
+| fome **simétrica** (espelho) | 302 a 1 949 nW | **pior que as fontes ideais** — descartada |
+| fome **assimétrica**, só 1º estágio | 107 a 306 nW | piso passa a ser o 2º estágio |
+| fome **assimétrica**, os dois estágios | **83,5 nW** | **aprova** |
+
+Descartadas com motivo, registradas no `CLAUDE.md` §9: fome simétrica; variante só-NMOS
+(não dispara em 1 e 10 nA); espelho estreito no 2º estágio (rouba excursão, pulso cai a 81%
+de VDD contra o mínimo de 90%).
+
+**O elemento certo era um espelho de corrente, não uma fonte.** As duas tentativas
+anteriores falharam pela mesma razão de fundo: uma fonte ideal é um *forçador* de corrente
+(passa exatamente IB, sempre), e o que a topologia precisa é de um *limitador* (passa de 0 a
+IB, conforme o circuito pedir). No espelho a fonte ideal fica no ramo de referência, onde o
+transistor em ligação diodo sempre conduz e não há violação de trilho possível; o elemento
+que limita o inversor é o transistor de saída do espelho, que é um transistor real. O ramo de
+referência é compartilhado entre neurônios num chip real e por isso fica **fora do orçamento
+por neurônio** — premissa que vale registrar, porque muda o denominador dos 83,5 nW.
+
+**O que este resultado NÃO fecha:** cinco pendências foram para o `CLAUDE.md` §5-A. A que
+bloqueia o critério de aceitação é a primeira — a curva f–I não foi refeita no ponto novo.
+
+**Nota de método.** Os dois testbenches anteriores foram derrubados antes de produzirem
+resultado (fontes ideais: conformidade infinita; fonte + resistor paralelo: Norton, com
+V de circuito aberto em VDD + IB·R). Custaram duas rodadas e não geraram número algum que
+tenha entrado no registro. Foi a Regra 1 funcionando como deveria: o resultado que não se
+tentou derrubar não é resultado.
+
+---
+
 ## 2026-09-06 — Revalidação da etapa 0: números refeitos, três hipóteses resolvidas
 
 **Fonte:** [`resultados/2026-09-06_revalidacao_etapa0/revalidacao.md`](../resultados/2026-09-06_revalidacao_etapa0/revalidacao.md)
