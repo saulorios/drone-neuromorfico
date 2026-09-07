@@ -115,6 +115,17 @@ T = 27 °C nominal.
 | CV do ISI | 0,0050% | dentro de uma corrida |
 | Pulso de saída | 92,2% de VDD | critério: ≥ 90% |
 
+**Com o PDK sky130** (canto `tt`, `.temp 27`, mesmas dimensões; fonte: `resultados/2026-09-07_migracao_sky130/migracao_sky130.md`). Mesmo denominador: `IB1` = 10 nA, `IB2` = 3 µA, `Iin` = 10 pA.
+
+| Grandeza | Valor | Denominador / condição |
+|---|---|---|
+| Potência por neurônio | **6,03 nW** | soma dos dois estágios, sobre ciclos inteiros; **exclui o ramo de referência** do espelho. Era 85,4 nW em nível 1 — **14× menor** |
+| Energia por disparo | **43,2 pJ** | = 6,03 nW ÷ 139,58 Hz. **Dentro da faixa publicada de 1 a 100 pJ** para neurônios neuromórficos — o projeto entra na faixa da literatura pela primeira vez. Era 0,60 nJ em nível 1 |
+| Potência na faixa 1–100 pA | 4,30 a 13,67 nW | nunca cruza o orçamento de 100 nW |
+| Frequência de disparo | 139,58 Hz | +0,9% sobre o nível 1 |
+| Ganho f–I | 13,886 Hz/pA | +0,7% sobre o nível 1; R² = 0,99999597 |
+| Fuga no nó `mem` | **25,3 fA** | inferida da curva f–I em operação, a 27 °C. O transistor isolado em `Vds` = 1,8 V dá 84,7 fA — 3,3× acima, por ser condição mais severa |
+
 **Curva f–I nesse mesmo ponto** (fonte: `resultados/2026-09-07_fi_espelho/fi_espelho.md`,
 ngspice 42, 12 pontos de 1 a 100 pA).
 
@@ -202,33 +213,43 @@ escala com a contagem de neurônios, não com a taxa de eventos.
 
 ---
 
-### Ressalva ABERTA — a tesoura: teto de consumo e piso de fuga se aproximam
+### Ressalva ABERTA — a tesoura: o teto caiu, o piso térmico continua
 
-**Isto é ressalva, não conclusão.** Dois limites independentes fecham sobre a faixa útil por
-cima e por baixo, e ninguém verificou onde eles se cruzam.
+**Atualizada em 2026-09-07 com a fuga medida em operação.** Isto é ressalva, não conclusão.
 
-**O teto vem do consumo, e está medido.** A potência cresce com `Iin` e cruza os 100 nW em
-`Iin` ≈ 54 pA. Foi por isso que a faixa útil ficou em 1 a 50 pA (§6). É medida em nível 1.
+**O teto de consumo DESAPARECEU.** Ele vinha de a potência cruzar 100 nW em `Iin` ≈ 54 pA,
+medido em nível 1. No sky130 a potência fica entre 4,30 e 13,67 nW em toda a faixa de 1 a
+100 pA e não cruza o orçamento em ponto algum. A faixa útil foi restaurada (§6).
 
-**O piso vem da fuga do `Mrst`, e sobe com a temperatura.** Medido em sky130: 84,7 fA a
-27 °C, com `Vds` = 1,8 V (limite superior — ver
-`resultados/2026-09-07_etapa1_pdk/validacao_pdk.md`). Projetando por regra de bolso
-(duplicação a cada 8–10 °C):
+**O piso térmico continua, com base melhor.** A projeção anterior usava 84,7 fA, medidos num
+transistor isolado em `Vds` = 1,8 V. A fuga **em operação**, inferida da própria curva f–I do
+neurônio migrado, é **25,3 fA a 27 °C** — 3,3× menor. Reprojetando (duplicação a cada
+8–10 °C):
 
-| a fuga cruza | duplicações | a 8 °C/dup | a 10 °C/dup |
-|---|---|---|---|
-| 1 pA (o piso da faixa útil) | 3,6 | **55 °C** | **63 °C** |
-| 10 pA | 6,9 | 82 °C | 96 °C |
-| 50 pA (o teto da faixa útil) | 9,2 | **101 °C** | **119 °C** |
+| T | fuga projetada |
+|---|---|
+| 27 °C | 25,3 fA (medida) |
+| 60 °C | 0,25 a 0,44 pA |
+| **85 °C** | **1,4 a 3,9 pA** |
+| **105 °C** | **5,6 a 21,8 pA** |
+| 125 °C | 23 a 123 pA |
 
-Em torno de **60 °C** a fuga iguala a menor corrente da faixa útil; em torno de **110 °C**
-iguala a maior. Entre os dois, a faixa útil é comida por baixo enquanto o consumo já a
-limitava por cima.
+| a fuga alcança | temperatura |
+|---|---|
+| 1 pA — o extremo **inferior** da faixa | **69 a 80 °C** |
+| 10 pA — o ponto nominal | 96 a 113 °C |
+| 100 pA — o extremo **superior** | 123 a 146 °C |
 
-**É extrapolação, não medida.** Regra de bolso aplicada a um único ponto de 27 °C, medido
-num transistor isolado, em `Vds` acima da condição de operação, com o neurônio ainda não
-migrado. O PDK tem os modelos de temperatura e pode responder direto — é matéria da etapa 3.
-Registrado aqui para que a etapa 3 comece sabendo o que procurar, **não** como resultado.
+**O canto quente deixou de ameaçar a faixa inteira e passou a cortar só o extremo inferior.**
+Com 84,7 fA a projeção dizia que a fuga engolia toda a faixa antes dos 120 °C; com 25,3 fA,
+o extremo superior sobrevive além de 120 °C e o que se perde é a sensibilidade a correntes
+pequenas — o neurônio deixa de responder a 1 pA por volta de 70–80 °C, mas continua
+funcionando com estímulos maiores.
+
+**Continua sendo extrapolação, não medida.** Regra de bolso aplicada a um ponto de 27 °C.
+O PDK tem os modelos de temperatura e responde direto — etapa 3. **E a pergunta da faixa
+térmica real continua pendente** (§5-A item 13): sem ela, não há como dizer se 69–80 °C é
+um problema ou uma margem confortável.
 
 ---
 
@@ -319,7 +340,8 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
 | 2026-09 | **Um chip homogêneo, replicado** — não chips especializados por modalidade | O gargalo real é a comunicação entre chips; a proporção entre modalidades é desconhecida e chips fixos a travam cedo demais; três máscaras custam três vezes mais. Mesma escolha de Loihi, SpiNNaker e Akida. Exceção legítima: a interface analógica de sensor é específica por modalidade e vai num chip pequeno separado. |
 | 2026-09 | **Topologia axon-hillock** (Mead, 1989), 7 transistores — **CONFIRMADA em 2026-09-06 com fome de corrente assimétrica no PMOS de ambos os estágios: 83,5 nW por neurônio, 151× abaixo da linha de base** | Base histórica validada; simples o bastante para ser entendida por inteiro antes de complicar. O consumo de 12,6 µW, que chegou a ameaçar a escolha, é corrigível dentro da própria topologia — não exige trocá-la. Fonte: `resultados/2026-09-06_espelho/espelho.md`. |
 | 2026-09-06 | **A fome de corrente é ASSIMÉTRICA: limita-se só o PMOS**, nunca os dois lados do inversor | A membrana opera entre 0,41 e 0,99 V, faixa em que M1p e M1n conduzem os dois sempre. O nível de `n1` é fixado pela **razão** entre as duas correntes. Grampear ambas ao mesmo IB destrói essa razão: nenhum lado vence, `n1` estaciona em ~0,83 V — dentro da janela de condução do 2º inversor — e o curto migra de estágio. Medido: fome simétrica dá 302 a 1 949 nW, **pior que as fontes ideais** (218 nW). A variante só-NMOS não dispara em 1 e 10 nA. |
-| 2026-09-07 | **A faixa útil do neurônio é `Iin` de 1 a 50 pA (f de 14 a 690 Hz)** | Acima de ~54 pA o consumo excede os 100 nW do orçamento (104,2 nW em 70 pA, 112,4 nW em 100 pA). Em vez de afrouxar o alvo de potência ou buscar outro ponto de polarização, limita-se a faixa. Consequência: a faixa útil encolhe de dois decades para 1,7, e o teto de frequência cai de 1,38 kHz para 690 Hz. Medida em `resultados/2026-09-07_fi_espelho/fi_espelho.md`. |
+| 2026-09-07 (b) | **A faixa útil volta a `Iin` de 1 a 100 pA** — REVERTE a decisão da mesma data, abaixo | O teto de 50 pA vinha de a potência cruzar 100 nW em 54 pA, e **isso era artefato dos modelos nível 1**. No sky130 a potência fica entre 4,30 e 13,67 nW em toda a faixa de 1 a 100 pA — folga de **7,3×** contra o orçamento, sem cruzá-lo em ponto algum. Medido em `resultados/2026-09-07_migracao_sky130/`. A restrição de consumo desapareceu; a faixa volta a dois decades e o teto de frequência a 1,39 kHz. |
+| ~~2026-09-07 (a)~~ | ~~**A faixa útil do neurônio é `Iin` de 1 a 50 pA (f de 14 a 690 Hz)**~~ — **REVERTIDA** no mesmo dia pela linha acima |
 | 2026-09-06 | **O espelho do 2º estágio é largo (W = 5 µm, L = 1 µm)** | Um dispositivo estreito, de nA, rouba excursão do pulso de saída e o derruba para 81% de VDD, reprovando o critério de ≥ 90%. |
 | 2026-09 | **Controle de voo não aprende** — software maduro existente (PX4 / ArduPilot) | Se a camada que estabiliza o drone aprender errado, o drone cai. Plasticidade só onde o erro custa um alarme falso. |
 | 2026-09 | **Plasticidade modulada por surpresa** | Resolve dois problemas de uma vez: esquecimento catastrófico (quase nada é gravado) e correlações espúrias (ocorrem em momentos calmos, com plasticidade fechada). |
@@ -358,6 +380,36 @@ corrigidos, qualquer resultado numérico é inválido. **Resultado produzido sem
 deve ser descartado, não interpretado.** Confirmado experimentalmente em 2026-09-06:
 tolerâncias padrão davam 20% de CV do ISI num circuito determinístico cujo valor correto é
 0,01%, e três frequências diferentes para o mesmo circuito.
+
+**Critério do pulso de saída — funcional, não fracionário.** O pulso **não** é julgado por
+uma fração de VDD. A regra "≥ 90% de VDD" foi arbitrada sem base física e está **revogada**
+em 2026-09-07. O que o pulso precisa fazer são três coisas, e cada uma é um teste:
+
+1. **Chutar `Cfb`.** A carga injetada é `Cfb · ΔV(out)`, então o que importa é a **excursão**
+   de `out`, não seu nível absoluto. Critério: a excursão precisa manter a janela de
+   histerese da membrana acima do ruído e do descasamento.
+2. **Abrir o gate do `Mrst`.** `out` no alto precisa levar `Mrst` a condução suficiente para
+   completar o reset dentro do ciclo. Critério: o reset termina, verificável na forma de onda
+   da membrana.
+3. **Ser lido como nível alto pelo estágio seguinte.** `out` alto precisa ficar acima do
+   ponto de transição do receptor com margem, e `out` baixo abaixo dele com margem — **e sem
+   criar corrente estática apreciável no receptor**.
+
+Um pulso que faz as três coisas está aprovado, tenha ele 88% ou 95% de VDD.
+
+**Lição de método: critério pré-registrado não pode depender de parâmetro do modelo antigo.**
+`VTO`, `V_th`, `KP` e tudo o que deles deriva mudam quando o modelo muda — que é justamente o
+propósito da migração. Um critério ancorado neles testa o modelo velho, não o circuito.
+Aconteceu **duas vezes** na migração de 2026-09-07:
+
+| critério | por que quebrou |
+|---|---|
+| "pulso ≥ 90% de VDD" | a fração 90% foi arbitrada; o nível de `out` depende do `V_th` do receptor, que mudou |
+| "`rp1`/`rp2` a menos de 300 mV do previsto" | a previsão usava `VTO` = 0,45 do nível 1; o pfet do sky130 tem `\|V_th\|` bem maior |
+
+Nos dois casos o **circuito** estava certo e o **critério** estava errado. Ancore critérios em
+grandezas funcionais — corrente entregue, transição completa, margem de ruído — ou em
+grandezas medidas no modelo novo. Nunca numa constante do modelo velho.
 
 **sky130: `W` e `L` são número puro em micrômetros.** Nos subcircuitos do `sky130_fd_pr`,
 escreva `W=1 L=0.15`, **nunca** `W=1u L=0.15u`. A sintaxe com sufixo entrega 1e-06 ao
