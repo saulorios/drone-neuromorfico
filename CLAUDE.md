@@ -221,24 +221,24 @@ escala com a contagem de neurônios, não com a taxa de eventos.
 medido em nível 1. No sky130 a potência fica entre 4,30 e 13,67 nW em toda a faixa de 1 a
 100 pA e não cruza o orçamento em ponto algum. A faixa útil foi restaurada (§6).
 
-**O piso térmico continua, com base melhor.** A projeção anterior usava 84,7 fA, medidos num
-transistor isolado em `Vds` = 1,8 V. A fuga **em operação**, inferida da própria curva f–I do
-neurônio migrado, é **25,3 fA a 27 °C** — 3,3× menor. Reprojetando (duplicação a cada
-8–10 °C):
+**O piso térmico continua, e a base foi MEDIDA em 2026-09-07** (`resultados/2026-09-07_fuga_mem/`).
+Os 25,3 fA que se usava antes eram **inferidos** da curva f–I e **estão revogados** — ver §5-A
+item 14. A fuga medida por ponto de operação DC **não é um número**: vale **0 em `mem` = 0**,
+sobe a um patamar de **55,4 a 62,1 fA** acima de 100 mV (variação de só 1,12×), e **muda de
+sinal** abaixo de zero, virando **injeção** de até **+3,7 pA em `mem` = −0,127 V**.
 
-| T | fuga projetada |
-|---|---|
-| 27 °C | 25,3 fA (medida) |
-| 60 °C | 0,25 a 0,44 pA |
-| **85 °C** | **1,4 a 3,9 pA** |
-| **105 °C** | **5,6 a 21,8 pA** |
-| 125 °C | 23 a 123 pA |
+Projetando pelo patamar, **56 fA** (duplicação a cada 8–10 °C):
 
-| a fuga alcança | temperatura |
-|---|---|
-| 1 pA — o extremo **inferior** da faixa | **69 a 80 °C** |
-| 10 pA — o ponto nominal | 96 a 113 °C |
-| 100 pA — o extremo **superior** | 123 a 146 °C |
+| a fuga alcança | com 56 fA medidos | *(com os 25,3 fA revogados)* |
+|---|---|---|
+| 1 pA — o extremo **inferior** da faixa | **60 a 69 °C** | *(69 a 80 °C)* |
+| 10 pA — o ponto nominal | **87 a 102 °C** | *(96 a 113 °C)* |
+| 100 pA — o extremo **superior** | **113 a 135 °C** | *(123 a 146 °C)* |
+
+⚠️ **Esta projeção é conservadora mas não é fiel.** Ela usa só o patamar e ignora que a
+injeção abaixo de zero **também cresce com a temperatura**, e mais rápido, por ser condução
+direta de junção. Os dois termos crescem juntos e em sentidos opostos. **A projeção correta
+exige medir a curva inteira em temperatura, não escalar um número** — etapa 3.
 
 **O canto quente deixou de ameaçar a faixa inteira e passou a cortar só o extremo inferior.**
 Com 84,7 fA a projeção dizia que a fuga engolia toda a faixa antes dos 120 °C; com 25,3 fA,
@@ -319,6 +319,24 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
     como a ressalva do `Vds` previa. A projeção da tesoura precisa ser refeita com 25 fA, o
     que desloca os cruzamentos para temperatura mais alta. Não recalculada: depende da faixa
     térmica ainda indefinida (item 13).
+
+14. **A curvatura da curva f–I em corrente baixa está SEM EXPLICAÇÃO.** O ponto de 1 pA fica
+    2,5% abaixo de uma reta proporcional. Eu havia atribuído isso a 25,3 fA de fuga; a medida
+    direta de 2026-09-07 **refuta a atribuição**: sobre a excursão real a fuga produz
+    **+1,7%**, para cima, não para baixo. O efeito líquido é uma *ajuda*, porque a injeção de
+    junção abaixo de `mem` = 0 mais que compensa a fuga acima. A causa da curvatura é outra.
+    Candidato: janela de histerese dependente de `Iin` — próximo critério de saída da etapa 1.
+
+15. **A junção de dreno do `Mrst` conduz DIRETO quando `mem` < 0**, injetando até **+3,7 pA**
+    em −0,127 V — 37% de `Iin` no ponto nominal e **370%** em `Iin` = 1 pA. O problema não é a
+    corrente: é que uma junção n+ diretamente polarizada **injeta portadores minoritários no
+    substrato**, o que é caminho de *latch-up* e de acoplamento entre neurônios vizinhos.
+    **Não está no mapa de riscos do dossiê §8 e precisa entrar.** É risco de isolamento, não
+    de consumo.
+
+16. **A medida DC de fuga não cobre `mem` de 0,45 a 0,562 V.** O disparo DC ocorre em 0,45 V;
+    em operação a membrana chega a 0,562 V porque o degrau de `Cfb` a empurra além. Esse
+    trecho só existe dinamicamente e não foi caracterizado.
 
 13. **PERGUNTA DE REQUISITO, EM ABERTO — qual é a faixa térmica real deste projeto?**
     Os −40 °C e 125 °C que a etapa 3 do dossiê usa **nunca foram justificados**. São a faixa
