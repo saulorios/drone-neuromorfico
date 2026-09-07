@@ -5,6 +5,57 @@ valiosa que o descarte. Ordem cronológica inversa (mais recente no topo).
 
 ---
 
+## 2026-09-07 — A curva f–I sobrevive; duas pendências fechadas, duas abertas
+
+**Fonte:** [`resultados/2026-09-07_fi_espelho/fi_espelho.md`](../resultados/2026-09-07_fi_espelho/fi_espelho.md)
+— ngspice 42, modelos nível 1 inalterados, ponto IB1 = 10 nA / IB2 = 3 µA.
+
+**O que fechou.** As pendências 1 e 2 do relatório do espelho. A curva f–I sobrevive com
+folga: R² = 0,99999917 no ajuste de intercepto livre, expoente log–log 1,0005 (0,05% da
+proporcionalidade exata), zona morta implícita de −22,8 fA — nenhuma, 44× abaixo do menor
+ponto medido. Convergência: frequência invariante em 0,002% sobre 16× de `tstep`, contra
+os 1% exigidos. Trilhos respeitados nos 12 pontos.
+
+**A linearidade melhorou com a fome de corrente**, o que não era esperado: a razão f/`Iin`
+deriva 0,7% ao longo de dois decades, contra 5% na linha de base. O preço é 14% de ganho
+(16,0 → 13,79 Hz/pA).
+
+**O `.nodeset` é obrigatório — confirmado e vira convenção.** Sem ele a simulação aborta
+com `Timestep too small; initial timepoint: trouble with node "rp2"`. Causa: com `uic` o
+ngspice parte de 0 V em todo nó fora do `.ic`, e o nó de referência em 0 V põe o transistor
+diodo com Vsg = VDD, muito acima da corrente de projeto. Os valores foram calculados, não
+arbitrados, e conferem com a medida dentro de 1 mV. `CLAUDE.md` §7.
+
+**Correção de método, com custo real.** A média de potência sobre "descartar 20% e integrar
+o resto" deixa um ciclo parcial na janela, e a sobra dá espalhamento de ±5 nW numa medida de
+~85 nW — o bastante para produzir uma curva de potência não-monotônica que não é física.
+Integrando sobre número inteiro de ciclos a curva fica limpa e monotônica. Isso também
+explica os ~5% de diferença inicial contra o valor publicado: remedido, o ponto nominal dá
+85,4 nW contra 83,5 nW, +2,2%. `CLAUDE.md` §7.
+
+**Duas pendências NOVAS, ambas de arquitetura, ambas de denominador:**
+
+1. **O ramo de referência do espelho custa 5,42 µW** — 63× o consumo do próprio neurônio.
+   Está fora do orçamento por ser compartilhado, o que é legítimo, mas **por quantos
+   neurônios nunca foi dito**. Para o total por neurônio caber em 100 nW é preciso
+   **N ≥ 370**. Abaixo disso os 85,4 nW não descrevem o chip. Isso vira requisito de
+   arquitetura: define um piso para o número de neurônios por ramo de polarização, e
+   portanto interage com a decisão de calibração individual da etapa 2.
+2. **O orçamento de 100 nW não vale em toda a faixa útil.** A potência cresce
+   monotonicamente com `Iin` e cruza os 100 nW em ≈ 54 pA (f ≈ 745 Hz), enquanto a faixa
+   declarada do neurônio vai a 100 pA. O critério foi enunciado no ponto nominal e lá passa
+   com folga de 1,17×; na faixa inteira, não. Ou se limita a faixa, ou se afrouxa o alvo,
+   ou se busca outro ponto de polarização — decisão do autor, não tomada aqui.
+
+**Nota de reconstrução.** O netlist do Resultado 3 não veio junto — só o `mirror.cir` da
+variante simétrica. Foi reconstruído da descrição do relatório e validado contra os números
+publicados antes de ser usado: frequência (138,28 contra 138,3 Hz) e pulso (92,22 contra
+92,2%) batem exatamente. As três premissas assumidas estão listadas na seção A do relatório.
+
+**Fora do escopo por instrução:** mapear a vizinhança de IB2 entre 1 e 3 µA, e o PDK.
+
+---
+
 ## 2026-09-06 — Consumo resolvido; a topologia axon-hillock FICA
 
 **Fonte:** [`resultados/2026-09-06_espelho/espelho.md`](../resultados/2026-09-06_espelho/espelho.md)

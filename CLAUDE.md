@@ -115,6 +115,20 @@ T = 27 °C nominal.
 | CV do ISI | 0,0050% | dentro de uma corrida |
 | Pulso de saída | 92,2% de VDD | critério: ≥ 90% |
 
+**Curva f–I nesse mesmo ponto** (fonte: `resultados/2026-09-07_fi_espelho/fi_espelho.md`,
+ngspice 42, 12 pontos de 1 a 100 pA).
+
+| Grandeza | Valor | Denominador / condição |
+|---|---|---|
+| Ganho f–I | **13,79 Hz/pA** | ajuste de intercepto livre, 12 pontos, `Iin` de 1 a 100 pA. Linha de base: 16,0 |
+| R² | **0,99999917** | ajuste linear; expoente log–log = 1,0005 |
+| Zona morta | **nenhuma** | intercepto de +0,31 Hz → −22,8 fA, 44× abaixo do menor ponto medido |
+| Resíduo máximo | 2,73% | no ponto de 1 pA; os outros 11 dentro de ±1,17% |
+| Deriva de f/`Iin` | **0,7%** | ao longo de dois decades. Linha de base: 5% — a linearidade **melhorou** |
+| Potência no ponto nominal | **85,4 nW** | medida sobre ciclos inteiros; era 87,5 nW com janela bruta |
+| Potência na faixa 1–100 pA | 80,5 a **112,4 nW** | ⚠️ **cruza os 100 nW em `Iin` ≈ 54 pA** (f ≈ 745 Hz) |
+| Ramo de referência do espelho | **5,42 µW** | ⚠️ fora do orçamento por neurônio; exige **N ≥ 370 neurônios** para amortizar dentro de 100 nW |
+
 ---
 
 ## 5 · Estado das ressalvas da etapa 0 — resolvidas em 2026-09-06
@@ -174,11 +188,10 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
 
 ### Do experimento do espelho (`resultados/2026-09-06_espelho/espelho.md`)
 
-1. **A curva f–I não foi refeita no ponto de operação novo.** Sem ela não se sabe se a
-   linearidade e a passagem pela origem sobrevivem a `IB1` = 10 nA, `IB2` = 3 µA. É o item
-   que falta para o critério de aceitação completo.
-2. **Sem estudo de convergência nesse ponto.** Os pontos com `IB2` na casa de µA precisaram
-   de `.nodeset` para convergir; sem ele, `Timestep too small` no nó de referência.
+1. ~~A curva f–I não foi refeita no ponto novo.~~ **FECHADA em 2026-09-07:** sobrevive.
+   R² = 0,99999917, expoente log–log 1,0005, sem zona morta, resíduo máximo 2,73%.
+2. ~~Sem estudo de convergência nesse ponto.~~ **FECHADA em 2026-09-07:** f invariante em
+   0,002% sobre 16× de `tstep`. O `.nodeset` é de fato obrigatório e virou convenção (§7).
 3. **As dimensões do espelho em nA são fictícias no nível 1.** W/L = 0,05 entrega 10 nA no
    modelo com Vov ≈ 0,09 V, mas 90 mV de sobretensão é inversão moderada, que o nível 1
    trata como lei quadrática — errado. O **comportamento** de limitador está correto; o
@@ -186,6 +199,15 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
 4. **A margem de 1,2× é estreita e o ponto ótimo é uma ilha.** `IB2` = 1 µA reprova no pulso
    (83,1% de VDD), `IB2` = 3 µA aprova (92,2%). A vizinhança entre 1 e 3 µA não foi mapeada.
 5. **Nível 1, sem sub-limiar, sem descasamento, sem parasitas** — como sempre.
+6. **O ramo de referência do espelho custa 5,42 µW**, 63× o consumo do neurônio. É legítimo
+   mantê-lo fora do orçamento por ser compartilhado, mas **por quantos neurônios nunca foi
+   dito**. Para o total por neurônio ficar em 100 nW são necessários **N ≥ 370**. Abaixo
+   disso o número de 85,4 nW não descreve o chip. Requisito de arquitetura novo, levantado
+   em 2026-09-07.
+7. **O orçamento de 100 nW não vale em toda a faixa útil.** A potência cresce com `Iin` e
+   cruza os 100 nW em ≈ 54 pA (f ≈ 745 Hz), enquanto a faixa declarada vai a 100 pA. O
+   critério foi enunciado no ponto nominal e lá passa; na faixa toda, não. Critério e faixa
+   de operação são incompatíveis como estão — decisão pendente do autor.
 
 ### Herdadas
 
@@ -245,6 +267,19 @@ corrigidos, qualquer resultado numérico é inválido. **Resultado produzido sem
 deve ser descartado, não interpretado.** Confirmado experimentalmente em 2026-09-06:
 tolerâncias padrão davam 20% de CV do ISI num circuito determinístico cujo valor correto é
 0,01%, e três frequências diferentes para o mesmo circuito.
+
+**`.nodeset` obrigatório em netlist com espelho de corrente.** Com `uic`, o ngspice pula o
+ponto de operação DC e parte de 0 V em todo nó fora do `.ic`. O nó de referência de um
+espelho em 0 V põe o transistor diodo com Vsg = VDD, muito acima da corrente de projeto, e
+a simulação **aborta**: `Timestep too small; initial timepoint: trouble with node "rpN"`.
+Confirmado em 2026-09-07. Calcule o palpite, não arbitre — para PMOS em ligação diodo,
+`V(rp) = VDD − (|VTO| + √(2·IB/(KP·W/L)))`.
+
+**Potência: integrar sobre número INTEIRO de ciclos.** Descartar 20% e integrar o resto
+deixa um ciclo parcial na janela, e a sobra produz espalhamento da ordem de 1/N — o
+bastante para gerar uma curva de potência não-monotônica que não é física. Integrar entre
+o primeiro e o último cruzamento de disparo da janela. Confirmado em 2026-09-07: corrigiu
+um espalhamento de ±5 nW numa medida de ~85 nW.
 
 **Versão do simulador — obrigatória no cabeçalho.** Todo relatório em `resultados/`
 declara a versão exata do ngspice usada (`ngspice --version`). Versões diferentes dão
