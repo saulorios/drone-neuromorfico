@@ -5,6 +5,72 @@ valiosa que o descarte. Ordem cronológica inversa (mais recente no topo).
 
 ---
 
+## 2026-09-06 — Revalidação da etapa 0: números refeitos, três hipóteses resolvidas
+
+**Fonte:** [`resultados/2026-09-06_revalidacao_etapa0/revalidacao.md`](../resultados/2026-09-06_revalidacao_etapa0/revalidacao.md)
+— ngspice 42, modelos nível 1 inalterados, **circuito não modificado**. A única alteração
+foi o bloco `.options` acrescentado a `spice/neuronio.cir`.
+
+**O que mudou:** a hipótese do `abstol` está **confirmada**, e com ela caem os números da
+etapa 0. Não foram corrigidos — foram **descartados e refeitos**.
+
+| Grandeza | Antes | Agora |
+|---|---|---|
+| Frequência nominal | 158 / ≈175 / ≈166 Hz | **160,3 Hz**, convergida |
+| CV do ISI | 20% (não percebido) | **0,010%** |
+| Ganho f–I | 17,5 Hz/pA | **16,0 Hz/pA** |
+| Excursão (`Cmem` 25 fF → topo) | 1,05 V → 0,079 V | **1,43 V → 0,107 V** (a 800 fF) |
+| Variação de f com `Cmem` (16×) | ~14%, não-monotônica | **24%**, monotônica de 25 a 400 fF |
+
+**Por quê:** `abstol` padrão = 1e-12 A = 1 pA, da ordem do sinal; `trtol` padrão = 7,
+relaxando o controle de erro de truncamento. As duas juntas produziam 20% de CV do ISI num
+circuito determinístico — fator 2000 acima do correto. Virou regra permanente no
+`CLAUDE.md` §7, com entrada correspondente no "o que não fazer" (§9).
+
+**Três hipóteses, três vereditos:**
+
+1. **Consumo excessivo — CONFIRMADA, pior que o estimado.** 12,6 µW por neurônio,
+   **7 × 10⁵ vezes** a potência do sinal de entrada (18 pW), 78 nJ por disparo contra
+   1–100 pJ na literatura. Independente de `Iin` de 1 a 100 pA: é piso fixo, não consumo de
+   sinal. Mecanismo: a faixa de operação da membrana (0,41–0,99 V) está inteiramente dentro
+   da janela em que os dois transistores do primeiro inversor conduzem — o inversor nunca
+   sai da região de transição. Previsto 7,5 µA, medido 7,1 µA.
+
+2. **Zona morta por corrente de fuga — REFUTADA.** Era hipótese minha, registrada como
+   previsão a priori do plano da etapa 1. A reta passa pela origem e não há zona morta
+   detectável até 1 pA; a razão f/`Iin` fica entre 15,3 e 16,04 Hz/pA em toda a faixa. A
+   discrepância que motivou a hipótese era inteiramente ruído numérico.
+
+3. **Fator 1,76× do modelo analítico — CONFIRMADO o desvio, REFUTADA a minha causa.** Eu
+   havia atribuído a *overshoot* da saída acima de VDD. É **reset incompleto**: a membrana
+   para em 0,406 V porque `Mrst` é fraco. `Wrst` variado 32× move a frequência 2,3×.
+   **`Mrst` é um elemento que fixa a frequência** — e o dossiê não o identifica como tal em
+   lugar nenhum. Consequência não prevista no mapa de riscos do dossiê §8: há um caminho
+   direto de descasamento de `Mrst` para dispersão de frequência entre neurônios, o que faz
+   dele um dispositivo crítico de casamento na etapa 2.
+
+**O achado principal sobrevive, com correção de formulação.** `Cmem` continua não sendo o
+controle de frequência — 16× de capacitor para 24% de frequência, contra os 1600% que
+`f ∝ 1/Cmem` previria. Mas a afirmação anterior de que `Cmem` "some da equação" estava forte
+demais: sobra um resíduo medido de 24%. O modelo `T = Cfb·VDD/Iin` só valeria com reset
+completo e auto-terminado, que não é o caso.
+
+**Ressalva nova, aberta, levantada na conferência desta integração:** a varredura de `Cmem`
+é monotônica decrescente de 25 a 400 fF, mas o ponto de **800 fF sobe** de 140,0 para
+151,0 Hz (+7,9%). Com CV intra-corrida de 0,03%, isso é ~260× o ruído — estrutura real, não
+artefato, e não explicada. A descrição "monotônica decrescente e limpa" vale para a faixa
+de 16× usada na comparação, não para a série completa. Registrado em `CLAUDE.md` §5 item 2.
+
+**O que NÃO foi feito:** nenhuma simulação nova nesta máquina (ngspice continua não
+instalado aqui), nenhuma alteração de circuito, nenhum download de PDK. A etapa 1 não foi
+iniciada.
+
+**Decisão adiada, não tomada:** a §6 ainda registra a topologia axon-hillock como decisão
+travada. O consumo medido é motivo novo suficiente para reabri-la, mas reabrir uma decisão
+de arquitetura não é ato de registro — fica aguardando o autor do projeto.
+
+---
+
 ## 2026-09-06 — Estrutura de pastas e CLAUDE.md criados
 
 **O quê:** os arquivos soltos na raiz foram reorganizados conforme a Parte 9.2 do dossiê,

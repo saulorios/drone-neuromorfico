@@ -23,7 +23,7 @@ compreensão de cena — nessas tarefas uma GPU comum é largamente superior.
 
 | Etapa | Descrição | Situação |
 |---|---|---|
-| 0 | Neurônio axon-hillock em ngspice, modelos nível 1 | **Concluída** (com ressalvas — ver §5) |
+| 0 | Neurônio axon-hillock em ngspice, modelos nível 1 | **Concluída e revalidada** em 2026-09-06. Ressalvas numéricas fechadas (§5); ressalva de consumo ABERTA e bloqueante (§5-A) |
 | 1 | Migrar para PDK SkyWater 130 nm | **Próxima** — plano em revisão, não iniciada |
 | 2 | Monte Carlo (descasamento) | Não iniciada — maior risco do projeto |
 | 3–10 | Cantos, par acoplado, coincidência, AER/FPGA, layout, tapeout | Não iniciadas |
@@ -35,7 +35,9 @@ literatura, e a origem está sempre indicada.
 instalado**; `numpy` e `matplotlib` **não estão instalados** no Python padrão
 (`~/miniconda3/bin/python3`); nenhum PDK presente. Disco: 20 GB livres de 468 GB (96%
 ocupado) — restrição real para instalar o sky130. Os scripts em `scripts/` **não foram
-executados nesta máquina**; foram herdados da etapa 0, rodada em outro ambiente.
+executados nesta máquina**; foram herdados da etapa 0, rodada em outro ambiente. A
+revalidação de 2026-09-06 também foi executada fora deste ambiente — os números da §4 vêm
+de `resultados/2026-09-06_revalidacao_etapa0/revalidacao.md`, não de execução local.
 
 ---
 
@@ -50,16 +52,25 @@ Modelo analítico de primeira ordem que explica o achado (derivado, não medido)
 - A rampa de integração sobe a `dV/dt = Iin / Ctot`.
 - Logo o período de integração é `T = Ctot · ΔV / Iin = Cfb · VDD / Iin`.
 
-**`Cmem` cancela exatamente.** Não é uma quase-compensação numérica: some da equação. O
-que fixa a frequência é `Cfb`, `VDD` e `Iin`.
+**`Cmem` é um controle fraco, com resíduo medido de 24% em 16×.** O cancelamento é real
+e dominante — a intuição ingênua `f ∝ 1/Cmem` previria 1600% — mas **não é exato**. Medido
+na revalidação: 183,1 Hz em 25 fF → 140,0 Hz em 400 fF. A formulação anterior, de que
+`Cmem` "some da equação", estava forte demais. O que fixa a frequência de primeira ordem é
+`Cfb`, `VDD` e `Iin`; `Cmem` entra como termo residual.
+
+**O modelo acima é incompleto por um motivo identificado:** ele supõe reset completo e
+auto-terminado. O reset real é incompleto — a membrana para em 0,406 V, não em zero — e
+por isso `Mrst` também fixa a frequência (ver §4 e §5 item 4).
 
 **Consequência de projeto:** `Cmem` deve ser **pequeno**. Não por velocidade, mas porque
-com `Cmem` grande a excursão de sinal desaba (1,05 V em 25 fF → 0,079 V em 400 fF, medido)
+com `Cmem` grande a excursão de sinal desaba (1,43 V em 25 fF → 0,107 V em 800 fF, medido)
 e abaixo de ~0,2 V o neurônio fica refém de descasamento entre transistores e ruído de
 alimentação. A frequência se controla pela corrente de entrada, não pela capacitância.
 
-**Impacto na área do chip:** a estimativa inicial supunha que o capacitor dominaria a área
-do neurônio. Está invertida — o neurônio pode ser mais compacto que o previsto.
+**Impacto na área do chip:** `Cmem` pode encolher, mas **quem fixa a frequência é `Cfb`, e
+`Cfb` não pode encolher sem alterar o ganho f–I**. A área do neurônio continua dominada por
+um capacitor — o outro. A economia é menor do que a formulação anterior ("o neurônio pode
+ser mais compacto que o previsto") sugeria. Corrigido em 2026-09-06.
 
 **Consequência ainda não explorada:** como `T ∝ VDD`, a frequência depende da alimentação
 por construção. Isso explica quantitativamente o painel 6 (ver §5) e indica que a
@@ -69,66 +80,111 @@ compensação de VDD é um problema de topologia, não de ajuste fino.
 
 ## 4 · Números da etapa 0 (com unidade e denominador)
 
-Todos com modelos nível 1, `Cmem = 100 fF`, `Cfb = 20 fF`, `VDD = 1,8 V`, T = 27 °C nominal.
+**Fonte: `resultados/2026-09-06_revalidacao_etapa0/revalidacao.md`** (ngspice 42, modelos
+nível 1 inalterados, netlist com o bloco `.options` — circuito não modificado). Os valores
+anteriores a 2026-09-06 foram produzidos com tolerâncias padrão e **estão descartados**,
+não corrigidos: ver §5.
+
+Todos com modelos nível 1, `Cmem = 100 fF`, `Cfb = 20 fF`, `VDD = 1,8 V`, `Wrst = 0,5 µm`,
+T = 27 °C nominal.
 
 | Grandeza | Valor | Denominador / condição |
 |---|---|---|
-| Frequência de disparo | 158 Hz | com `Iin` = 10 pA (EXP1, `tstop` 80 ms, `tstep` 2 µs) |
-| Ganho f–I | 17,5 Hz/pA | ajuste linear sobre 12 pontos, `Iin` de 1 a 100 pA |
-| Faixa de frequência | 24 Hz a 1,75 kHz | extremos medidos em `Iin` = 1 pA e 100 pA |
-| Deriva com alimentação | 18% pico-a-pico | de f; denominador = f em VDD nominal (1,80 V); VDD variado ±10% (1,62–1,98 V) |
-| Excursão da membrana | 1,05 V → 0,079 V | `Cmem` de 25 fF a 400 fF (16×), `Iin` = 10 pA |
-| Variação de f com `Cmem` | ~14% pico-a-pico | denominador = f em `Cmem` = 100 fF; `Cmem` variado 16× |
+| Frequência de disparo | **160,3 Hz** | com `Iin` = 10 pA; convergido — invariante de `tstep` de 5 µs a 0,5 µs |
+| CV do ISI (jitter) | 0,010% | desvio padrão do ISI sobre o ISI médio, dentro de uma corrida |
+| Ganho f–I | **16,0 Hz/pA** | ajuste sobre 12 pontos, `Iin` de 1 a 100 pA |
+| Faixa de frequência | 15,3 Hz a 1,604 kHz | extremos medidos em `Iin` = 1 pA e 100 pA |
+| Zona morta em corrente baixa | nenhuma detectável | reta pela origem; menor corrente testada = 1 pA |
+| Potência por neurônio | **12,6 µW** | no ponto nominal; = 6,97 µA médios × 1,8 V |
+| Razão potência/sinal | **7 × 10⁵** | denominador = potência do sinal de entrada, 1,8 V × 10 pA = 18 pW |
+| Energia por disparo | **78 nJ** | = 12,6 µW ÷ 160,3 Hz. Neurônios neuromórficos publicados: 1–100 pJ, ~10⁶× abaixo |
+| Dependência do consumo com `Iin` | **nenhuma** | 12,6 a 12,8 µW para `Iin` de 10 a 100 pA (16,3 µW em 1 pA). É um piso fixo, não consumo de sinal |
+| Excursão da membrana | 1,43 V → 0,107 V | `Cmem` de 25 fF a 800 fF (32×), `Iin` = 10 pA |
+| Variação de f com `Cmem` | 24% | denominador = f em `Cmem` = 25 fF (183,1 Hz); `Cmem` variado 16× (25→400 fF) |
+| Variação de f com `Wrst` | 2,3× | `Wrst` variado 32× (0,25 → 8 µm). **`Mrst` fixa a frequência** |
+| Deriva com alimentação | 18% pico-a-pico | ⚠️ **não revalidado** — número de tolerância padrão, tratar como descartado até refazer |
 
 ---
 
-## 5 · Ressalvas abertas sobre a etapa 0 (ler antes de citar qualquer número acima)
+## 5 · Estado das ressalvas da etapa 0 — resolvidas em 2026-09-06
 
-Estes pontos foram levantados em 2026-09-06 ao reler os resultados. **Nenhum foi
-resolvido.** Não propague os números da §4 como definitivos sem fechá-los.
+Levantadas ao aplicar a Regra 1 sobre os resultados originais; **fechadas** pela
+revalidação em `resultados/2026-09-06_revalidacao_etapa0/revalidacao.md`. Mantidas aqui
+com o veredito, porque o motivo do descarte vale mais que o descarte.
 
-1. **A reprodutibilidade numérica do próprio simulador é de ~10%, e não foi medida.**
-   O mesmo circuito, com parâmetros nominais idênticos (`Cmem` 100 fF, `Iin` 10 pA,
-   `VDD` 1,8 V), aparece com três valores em três experimentos: **158 Hz** (EXP1,
-   `tstep` 2 µs), **≈175 Hz** (EXP2, ponto de 10 pA da curva f–I, `tstep` 3 µs) e
-   **≈166 Hz** (EXP3/EXP4, ponto nominal, `tstep` 3 µs). Os dois últimos foram lidos da
-   figura, não dos dados brutos (perdidos). A diferença acompanha `tstep`/`tstop`, o que
-   aponta para erro de integração numérica, não física. **Ação: estudo de convergência de
-   `tstep` antes de qualquer número da etapa 1.**
+1. **RESOLVIDA — era ruído numérico.** O espalhamento de ~10% entre corridas (158 / ≈175 /
+   ≈166 Hz para o mesmo circuito) não era física. Com tolerâncias corrigidas a frequência
+   converge para **160,3 Hz**, invariante de `tstep` de 5 µs a 0,5 µs. O jitter *dentro* de
+   cada corrida era pior que o espalhamento entre elas: **CV do ISI de 20%** num circuito
+   determinístico, onde o valor correto é 0,01% — fator 2000.
 
-2. **O "quase plano" do painel 4 tem estrutura que provavelmente é ruído numérico.**
-   A varredura de `Cmem` dá 176 / 168 / 166 / 153 / 172 Hz para 25 / 50 / 100 / 200 / 400 fF —
-   não-monotônica, com 14% de espalhamento, apenas ~1,4× acima da irreprodutibilidade do
-   item 1. A conclusão qualitativa (`Cmem` não controla f) sobrevive folgadamente: 16× de
-   capacitor para 14% de frequência. Mas a *forma* da curva não é resultado.
+2. **RESOLVIDA — a estrutura do painel 4 era ruído, mas o resíduo de 24% é real.** Com
+   tolerâncias corrigidas a varredura de `Cmem` fica limpa (CV do ISI ~0,03%). O achado
+   sobrevive: 16× de capacitor produz 24% de variação, contra os 1600% da intuição ingênua.
+   Mas não é o cancelamento exato que a §3 afirmava — ver a reformulação lá.
+   ⚠️ **Ressalva nova, não fechada:** a curva é monotônica decrescente de 25 a 400 fF, mas
+   o ponto de 800 fF **sobe** de 140,0 para 151,0 Hz (+7,9%). Com CV intra-corrida de
+   0,03%, esse salto é ~260× o ruído: é estrutura real, não artefato, e não está explicada.
+   A descrição "monotônica decrescente e limpa" vale para 25–400 fF, não para a série toda.
 
-3. **A linearidade da curva f–I foi afirmada, nunca medida.** `scripts/plots.py` imprime
-   a string literal `(linear, R² alto)` — o R² **nunca é calculado**. Além disso o ajuste é
-   dominado pelos pontos de corrente alta: com intercepto de +6,5 Hz, a reta prevê 181 Hz
-   em 10 pA contra 158 Hz medidos (13% abaixo da reta). **Ação: calcular R² e resíduos, e
-   ajustar em escala log-log para não deixar os pontos de 50–100 pA mandarem no ajuste.**
+3. **RESOLVIDA — a curva é linear e passa pela origem.** A razão f/`Iin` fica entre 15,3 e
+   16,04 Hz/pA ao longo de toda a faixa de 1 a 100 pA. Um ajuste de intercepto livre sobre
+   os 12 pontos dá `f = 16,05·Iin − 1,21 Hz`, isto é, uma zona morta implícita de ~75 fA —
+   treze vezes abaixo da menor corrente testada, portanto **não detectável**. A curvatura
+   aparente no original era o ruído do item 1.
+   ⚠️ Continua valendo o defeito de método: `scripts/plots.py` imprime a string literal
+   `(linear, R² alto)` sem calcular R² algum. **Não corrigido no código.**
 
-4. **O modelo analítico da §3 acerta as tendências e erra o valor absoluto por 1,76×.**
-   `T = Cfb·VDD/Iin` prevê 278 Hz em 10 pA; mediu-se 158 Hz. Mas o modelo acerta a
-   independência de `Cmem` (painel 4), acerta a proporcionalidade a `Iin` (painel 3) e
-   acerta a escala com VDD: prevê 186 → 152 Hz de 1,62 a 1,98 V, mediu-se 186 → 156 Hz.
-   Um fator multiplicativo constante está faltando — provavelmente o *overshoot* da saída
-   acima de VDD (visível no painel 1, ~1,9 V) mais o *undershoot* do reset, que juntos
-   alargam a janela de histerese. **Ação: medir a janela de histerese diretamente
-   (V de disparo menos V de reset) em vez de inferi-la.**
+4. **RESOLVIDA, com a minha hipótese REFUTADA.** O fator 1,76× do modelo analítico existe,
+   mas **a causa não é overshoot da saída acima de VDD**, como eu havia suposto. É **reset
+   incompleto**: `Mrst` é fraco e a membrana para em **0,406 V**, não em zero. Onde ela
+   para depende da força de `Mrst` e da largura do pulso — daí `Wrst` variado 32× mover a
+   frequência 2,3× (189,4 Hz em 0,25 µm → 81,4 Hz em 8 µm). `T = Cfb·VDD/Iin` só valeria
+   com reset completo e auto-terminado.
+   **Consequência para a etapa 2:** existe um caminho direto de descasamento de `Mrst` para
+   dispersão de frequência entre neurônios, que **não está no mapa de riscos do dossiê §8**.
+   `Mrst` passa a ser um dispositivo crítico de casamento, ao lado de `Cfb`.
 
-5. **Hipótese que pode explicar 1, 2 e 3 de uma vez: `abstol`.** O padrão do ngspice é
-   `abstol = 1e-12 A = 1 pA` — e a etapa 0 rodou com `Iin` de 1 a 100 pA, sem nenhum
-   `.options`. No ponto de 1 pA da curva f–I, a corrente de sinal inteira cabe dentro da
-   tolerância de convergência do simulador; no ponto nominal de 10 pA, a tolerância vale
-   10% do sinal — a mesma ordem do espalhamento do item 1. O `gmin` padrão (1e-12 S) soma
-   mais ~0,9 pA de condutância parasita no nó `mem`. **Não testado** (ngspice não está
-   instalado aqui). É o passo 1.0 da etapa 1, antes de qualquer PDK, porque custa minutos.
-   **Se confirmado, vira regra permanente:** nenhum número de corrente sub-limiar deste
-   projeto é válido sem `abstol` apertado.
+5. **CONFIRMADA — era `abstol`, e também `trtol`.** A hipótese está validada: as tolerâncias
+   padrão do ngspice invalidavam os três itens acima de uma vez. `trtol` (padrão 7) pesa
+   tanto quanto `abstol` — relaxa o controle de erro de truncamento local e deixa o
+   integrador dar passos grandes demais. Virou regra permanente do projeto: ver §7.
 
-6. **Limitações já reconhecidas no dossiê §4.4** (sem modelo sub-limiar, sem variação de
-   fabricação, sem parasitas de layout) permanecem. A #1 é o objeto da etapa 1.
+6. **Limitações do dossiê §4.4 permanecem** (sem modelo sub-limiar, sem variação de
+   fabricação, sem parasitas de layout). A #1 é o objeto da etapa 1.
+
+---
+
+## 5-A · Ressalvas ABERTAS (o que a revalidação não fechou)
+
+1. **O consumo inviabiliza a topologia como está.** 12,6 µW por neurônio, **7 × 10⁵ vezes**
+   a potência do sinal, 78 nJ por disparo contra 1–100 pJ na literatura — ~10⁶ acima.
+   Mecanismo confirmado por cálculo à mão e por medida: a membrana oscila entre 0,41 e
+   0,99 V; com `VTO` = 0,45 V e VDD = 1,8 V, o NMOS do primeiro inversor conduz acima de
+   0,45 V e o PMOS conduz abaixo de 1,35 V. **A faixa inteira de operação da membrana está
+   dentro da janela em que os dois conduzem.** O inversor não atravessa a região de
+   transição — ele nunca sai dela. Corrente de curto-circuito prevista a meia rampa:
+   7,5 µA; medida: 7,1 µA. É isso que torna o consumo independente de `Iin`.
+   **Mitigação testada e insuficiente:** enfraquecer o primeiro inversor funciona (189× de
+   redução para 100× de enfraquecimento) mas exigiria `W` = 10 nm — não fabricável; o
+   mínimo do `nfet_01v8` no sky130 é `W` = 0,42 µm, e manter W/L pediria `L` ≈ 21 µm, área
+   proibitiva. **O caminho viável é limitar a corrente do inversor** (inversor com fome de
+   corrente) **ou trocar de topologia.** Decisão pendente: a §6 ainda registra a topologia
+   axon-hillock como decisão travada, e este resultado é motivo novo para reabri-la.
+   **Não reaberta unilateralmente** — aguarda decisão do autor do projeto.
+
+2. **A deriva de 18% com VDD não foi revalidada.** É número de tolerância padrão; pela
+   lição do item 1 da §5, deve ser tratado como descartado, não como aproximado.
+
+3. **O CV de 5,8% em 4 dos 12 pontos da varredura de `Iin`** não foi investigado. Suspeita
+   registrada na revalidação: artefato do detector de disparo (12 disparos, efeito de
+   borda), não do circuito.
+
+4. **O ponto de 800 fF da varredura de `Cmem`** (item 2 acima) não está explicado.
+
+5. **Tudo continua em modelos nível 1**, sem condução sub-limiar. O consumo em sky130 pode
+   diferir em magnitude, mas o mecanismo de curto-circuito é estrutural e não some com a
+   troca de modelos.
 
 ---
 
@@ -160,6 +216,21 @@ resolvido.** Não propague os números da §4 como definitivos sem fechá-los.
 **Dispositivos:** `Cmem` (membrana), `Cfb` (realimentação), `Cload` (carga de saída),
 `Iin` (corrente sináptica de entrada), `M1p/M1n` (1º inversor), `M2p/M2n` (2º inversor),
 `Mrst` (reset).
+
+**Tolerâncias numéricas — regra obrigatória.** Todo netlist deste projeto **DEVE** conter
+o bloco `.options` de tolerância:
+
+```spice
+.options abstol=1e-15 vntol=1e-9 reltol=1e-4 gmin=1e-15 chgtol=1e-16
++ trtol=1
+```
+
+O `abstol` padrão do ngspice é **1e-12 A = 1 pA**, da mesma ordem do sinal deste circuito.
+O `trtol` padrão é **7**, e relaxa o controle de erro de truncamento. Sem os dois
+corrigidos, qualquer resultado numérico é inválido. **Resultado produzido sem esse bloco
+deve ser descartado, não interpretado.** Confirmado experimentalmente em 2026-09-06:
+tolerâncias padrão davam 20% de CV do ISI num circuito determinístico cujo valor correto é
+0,01%, e três frequências diferentes para o mesmo circuito.
 
 **Unidades:** SI com prefixos SPICE (`f` = femto, `p` = pico, `u` = micro, `n` = nano).
 Atenção: em SPICE `M` significa *mili*, não mega — use `MEG`. Todo número em texto,
@@ -218,6 +289,10 @@ deste repositório — código, gráfico, commit ou comentário.
 
 ## 9 · O que NÃO fazer (erros já cometidos ou descartados)
 
+- **Não rodar ngspice sem o bloco `.options` de tolerância.** Ver §7. O resultado não é
+  "aproximado" nem "com ruído": é inválido, e deve ser descartado em vez de interpretado.
+  Este erro já custou a etapa 0 inteira — três meses de números que tiveram que ser
+  refeitos, e três hipóteses de física levantadas para explicar um artefato de simulador.
 - **Não escrever caminhos absolutos nos scripts.** A etapa 0 gravou `/home/claude/...`
   em `run_sims.py` e `plots.py`; ao mudar de máquina os dados brutos (`.npy`) se perderam
   e sobrou só o PNG — é por isso que as ressalvas da §5 tiveram que ser reconstruídas
@@ -237,25 +312,3 @@ deste repositório — código, gráfico, commit ou comentário.
   anterior e detecta uma classe de erro que a anterior não conseguia ver.
 - **Não tratar modelos nível 1 como preditivos.** Eles não modelam condução sub-limiar —
   exatamente a região de pA onde o neurônio opera. Tendências valem; valores absolutos não.
-
-Acréscimos ao passo 4 (mesmo commit):
-
-9. §4, linha "Excursão da membrana": os valores 1,05 V → 0,079 V foram lidos de
-   figura. As medidas corretas, com tolerâncias apertadas, são 1,43 V → 0,107 V
-   para Cmem de 25 fF a 400 fF. O colapso é MAIS severo que o registrado.
-
-10. §3, "Impacto na área do chip": corrigir. Cmem pode encolher, mas quem fixa a
-    frequência é Cfb, que NÃO pode encolher sem alterar o ganho f-I. A área do
-    neurônio continua dominada por um capacitor — o outro. A economia é menor
-    que "o neurônio pode ser mais compacto que o previsto" sugere.
-
-11. §6, decisão "Topologia axon-hillock": marcar como EM REVISÃO, com o motivo:
-    consumo medido de 12,6 uW por neurônio, 7e5 vezes a potência do sinal, por
-    curto-circuito permanente no primeiro inversor. Decisão de manter ou trocar
-    depende do experimento de limitação de corrente. Não remover a decisão da
-    tabela — marcá-la.
-
-12. §5 item 3, a ação proposta: o ajuste log-log testa se o expoente é 1, mas não
-    representa deslocamento da reta, que é o que revelaria zona morta. Registrar
-    que são necessários os DOIS ajustes: log-log para o expoente, linear com
-    intercepto livre para a zona morta.
