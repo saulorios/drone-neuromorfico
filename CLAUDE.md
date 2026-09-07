@@ -24,7 +24,7 @@ compreensão de cena — nessas tarefas uma GPU comum é largamente superior.
 | Etapa | Descrição | Situação |
 |---|---|---|
 | 0 | Neurônio axon-hillock em ngspice, modelos nível 1 | **Concluída e revalidada.** Ressalvas numéricas fechadas (§5); **consumo resolvido** em 2026-09-06 (12,6 µW → 83,5 nW) e topologia confirmada. Pendências não bloqueantes em §5-A |
-| 1 | Migrar para PDK SkyWater 130 nm | **EM ANDAMENTO** desde 2026-09-07. PDK instalado (subconjunto ngspice, 127 MB, em `spice/models/sky130/`, fora do versionamento). Transistor isolado validado: `W`/`L` em µm puro, Id = 501,0 µA em W=1 L=0,15. **O neurônio ainda não foi migrado.** Ver `resultados/2026-09-07_etapa1_pdk/` |
+| 1 | Migrar para PDK SkyWater 130 nm | **NEURÔNIO MIGRADO** em 2026-09-07, canto `tt`, 27 °C. f–I reproduz o nível 1 (ganho 13,886 contra 13,794 Hz/pA, +0,7%). Consumo **14× menor**: 6,03 nW contra 85,4. **Pulso reprova**: 88,84% contra o mínimo de 90%. Ver `resultados/2026-09-07_migracao_sky130/` |
 | 2 | Monte Carlo (descasamento) | Não iniciada — maior risco do projeto |
 | 3–10 | Cantos, par acoplado, coincidência, AER/FPGA, layout, tapeout | Não iniciadas |
 
@@ -282,7 +282,24 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
 9. **Divergência de 11% na potência da linha de base entre ngspice 41 e 42**, não separada.
    Ver a convenção de registrar versão em §7.
 
-10. **PERGUNTA DE REQUISITO, EM ABERTO — qual é a faixa térmica real deste projeto?**
+10. **O pulso de saída reprova no sky130: 88,84% contra o mínimo de 90%**, em toda a faixa
+    útil (passa só em 70 e 100 pA). Causa identificada e não corrigida: o nível baixo de `n1`
+    subiu de 0,051 para 0,591 V porque `M1n` opera em inversão fraca no sky130, e com `n1`
+    parando aí o `M2n` continua parcialmente ligado, prendendo `out` num divisor. As correções
+    óbvias mexem em dimensão ou polarização e não foram tentadas.
+
+11. **A faixa útil de 1 a 50 pA pode ser reaberta.** O teto de 54 pA (§6, 2026-09-07) **era
+    artefato dos modelos nível 1**. No sky130 a potência em 100 pA é 13,67 nW, 7,3× abaixo do
+    orçamento, e não cruza os 100 nW em ponto algum. Decisão do autor — não alterei o §6.
+
+12. **A tesoura (§5) perdeu o teto, mas não o piso.** O limite de consumo desapareceu. A fuga
+    térmica continua, e agora com base melhor: **25,3 fA em operação** a 27 °C, inferidos da
+    própria curva f–I, contra os 84,7 fA do transistor isolado em `Vds` = 1,8 V — 3,3× menor,
+    como a ressalva do `Vds` previa. A projeção da tesoura precisa ser refeita com 25 fA, o
+    que desloca os cruzamentos para temperatura mais alta. Não recalculada: depende da faixa
+    térmica ainda indefinida (item 13).
+
+13. **PERGUNTA DE REQUISITO, EM ABERTO — qual é a faixa térmica real deste projeto?**
     Os −40 °C e 125 °C que a etapa 3 do dossiê usa **nunca foram justificados**. São a faixa
     automotiva, herdada por convenção, não derivada da aplicação. Um drone de busca e resgate
     com um chip abaixo de 1 mW dificilmente chega a 125 °C de junção.

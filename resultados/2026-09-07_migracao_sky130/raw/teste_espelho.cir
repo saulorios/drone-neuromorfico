@@ -1,0 +1,22 @@
+* Discriminador: os espelhos entregam a corrente programada quando em saturacao?
+.lib spice/models/sky130/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+.temp 27
+Vddr vddr 0 1.8
+Vd1 vdd1 0 1.8
+Vd2 vdd2 0 1.8
+* referencias
+Iref1 rp1 0 DC 10n
+XMref1 rp1 rp1 vddr vddr sky130_fd_pr__pfet_01v8 W=0.5 L=10
+Iref2 rp2 0 DC 3u
+XMref2 rp2 rp2 vddr vddr sky130_fd_pr__pfet_01v8 W=5 L=1
+* saidas do espelho, com o dreno FORCADO a 0,9 V (saturacao garantida)
+Vs1 s1 0 0.9
+Vs2 s2 0 0.9
+XMbp1 s1 rp1 vdd1 vdd1 sky130_fd_pr__pfet_01v8 W=0.5 L=10
+XMbp2 s2 rp2 vdd2 vdd2 sky130_fd_pr__pfet_01v8 W=5 L=1
+.options abstol=1e-15 vntol=1e-9 reltol=1e-4 gmin=1e-15
+.control
+op
+print v(rp1) v(rp2) i(Vs1) i(Vs2)
+.endc
+.end
