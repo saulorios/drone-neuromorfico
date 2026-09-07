@@ -12,13 +12,13 @@ M2n out n1  0    0    NMOS W=2u L=0.5u
 Cfb out mem 20f
 Mrst mem out 0 0 NMOS W=0.5u L=2u
 Cload out 0 5f
-.include /home/saulo-rios/Documentos/sari/drone-neuromorfico/spice/models/generic_l1.mod
+.include spice/models/generic_l1.mod
 .options abstol=1e-15 vntol=1e-9 reltol=1e-4 gmin=1e-15 chgtol=1e-16
 + trtol=1
 .ic v(mem)=0 v(out)=0
 .control
 set filetype=ascii
 tran 0.5u 900m 0 0.5u uic
-wrdata /home/saulo-rios/Documentos/sari/drone-neuromorfico/resultados/2026-09-06_starving/raw/fi_10n_1p.txt v(mem) v(out) v(n1) i(vdd1) i(vdd2)
+wrdata resultados/2026-09-06_starving/raw/fi_10n_1p.txt v(mem) v(out) v(n1) i(vdd1) i(vdd2)
 .endc
 .end

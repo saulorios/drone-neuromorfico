@@ -232,6 +232,13 @@ deve ser descartado, não interpretado.** Confirmado experimentalmente em 2026-0
 tolerâncias padrão davam 20% de CV do ISI num circuito determinístico cujo valor correto é
 0,01%, e três frequências diferentes para o mesmo circuito.
 
+**Versão do simulador — obrigatória no cabeçalho.** Todo relatório em `resultados/`
+declara a versão exata do ngspice usada (`ngspice --version`). Versões diferentes dão
+números diferentes: a revalidação da etapa 0 rodou na **42** e o experimento de fome de
+corrente na **41**, e essa diferença é candidata aos 11% de divergência na potência da
+linha de base entre os dois. Sem a versão registrada, não há como separar mudança de
+circuito de mudança de ferramenta.
+
 **Unidades:** SI com prefixos SPICE (`f` = femto, `p` = pico, `u` = micro, `n` = nano).
 Atenção: em SPICE `M` significa *mili*, não mega — use `MEG`. Todo número em texto,
 gráfico ou commit carrega unidade.
@@ -293,6 +300,11 @@ deste repositório — código, gráfico, commit ou comentário.
   "aproximado" nem "com ruído": é inválido, e deve ser descartado em vez de interpretado.
   Este erro já custou a etapa 0 inteira — três meses de números que tiveram que ser
   refeitos, e três hipóteses de física levantadas para explicar um artefato de simulador.
+- **Não escrever caminhos absolutos dentro dos netlists gerados.** Um `.cir` versionado
+  com `/home/<usuario>/...` no `.include` ou no `wrdata` não roda em outra máquina — o
+  netlist deixa de ser reprodutível e vira registro morto. Gerar sempre relativo à raiz
+  do projeto, com o ngspice rodando a partir dela. Corrigido em 2026-09-06 em
+  `scripts/run_starving.py`, que cometia exatamente isso.
 - **Não escrever caminhos absolutos nos scripts.** A etapa 0 gravou `/home/claude/...`
   em `run_sims.py` e `plots.py`; ao mudar de máquina os dados brutos (`.npy`) se perderam
   e sobrou só o PNG — é por isso que as ressalvas da §5 tiveram que ser reconstruídas

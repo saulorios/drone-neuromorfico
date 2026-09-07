@@ -1,4 +1,4 @@
-* base_ts5u
+* val_base
 Vdd1 vdd1 0 1.8
 Vdd2 vdd2 0 1.8
 Iin 0 mem DC 10p
@@ -16,7 +16,7 @@ Cload out 0 5f
 .ic v(mem)=0 v(out)=0
 .control
 set filetype=ascii
-tran 5u 100m 0 5u uic
-wrdata resultados/2026-09-06_starving/raw/base_ts5u.txt v(mem) v(out) v(n1) i(vdd1) i(vdd2)
+tran 0.5u 100m 0 0.5u uic
+wrdata resultados/2026-09-06_starving_conformidade/raw/val_base.txt v(mem) v(out) v(n1) i(vdd1) i(vdd2)
 .endc
 .end

@@ -14,10 +14,23 @@ import os, subprocess, numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NG = os.environ.get("NGSPICE_BIN", "ngspice")
-OUT = os.path.join(ROOT, "resultados", "2026-09-06_starving")
-RAW = os.path.join(OUT, "raw")
+# CLAUDE.md §9: nada de caminho absoluto dentro dos .cir gerados. Tudo relativo
+# a ROOT, e o ngspice roda com cwd=ROOT.
+OUT_REL = os.path.join("resultados", "2026-09-06_starving")
+RAW_REL = os.path.join(OUT_REL, "raw")
+MODELS_REL = os.path.join("spice", "models", "generic_l1.mod")
+OUT = os.path.join(ROOT, OUT_REL)
+RAW = os.path.join(ROOT, RAW_REL)
 os.makedirs(RAW, exist_ok=True)
-MODELS = os.path.join(ROOT, "spice", "models", "generic_l1.mod")
+
+
+def ngspice_version():
+    """Versao exata do simulador - vai no cabecalho de todo relatorio."""
+    r = subprocess.run([NG, "--version"], capture_output=True, text=True)
+    for ln in (r.stdout + r.stderr).splitlines():
+        if "ngspice-" in ln:
+            return ln.split("ngspice-")[1].split(":")[0].strip()
+    return "desconhecida"
 
 OPTIONS = """.options abstol=1e-15 vntol=1e-9 reltol=1e-4 gmin=1e-15 chgtol=1e-16
 + trtol=1"""
@@ -45,13 +58,13 @@ M2n out n1  0    0    NMOS W=2u L=0.5u
 Cfb out mem {cfb}
 Mrst mem out 0 0 NMOS W=0.5u L=2u
 Cload out 0 5f
-.include {MODELS}
+.include {MODELS_REL}
 {OPTIONS}
 .ic v(mem)=0 v(out)=0
 .control
 set filetype=ascii
 tran {tstep} {tstop} 0 {tstep} uic
-wrdata {RAW}/{name}.txt v(mem) v(out) v(n1) i(vdd1) i(vdd2)
+wrdata {RAW_REL}/{name}.txt v(mem) v(out) v(n1) i(vdd1) i(vdd2)
 .endc
 .end
 """
@@ -61,7 +74,8 @@ def run(name, inv1=INV1_STARVED, ib="1n", iin="10p", cmem="100f", cfb="20f",
         vdd="1.8", tstop="100m", tstep="2u"):
     path = f"{RAW}/{name}.cir"
     open(path, "w").write(netlist(name, inv1, ib, iin, cmem, cfb, vdd, tstop, tstep))
-    r = subprocess.run([NG, "-b", path], capture_output=True, text=True, timeout=1800)
+    r = subprocess.run([NG, "-b", os.path.join(RAW_REL, f"{name}.cir")],
+                   cwd=ROOT, capture_output=True, text=True, timeout=1800)
     f = f"{RAW}/{name}.txt"
     if not os.path.exists(f):
         return None, (r.stderr or r.stdout)[-800:]
@@ -181,3 +195,27 @@ def curva_fi(ib="10n", tstep="0.5u"):
         print(f"  {iin:>6} | {r['f']:9.2f} | {r['f']/v:9.3f} | {r['cv']:8.4f} |"
               f" {r['ptot']*1e9:9.2f} | {r['outmax']:8.3f}")
     return pts
+
+def regenerar_cir():
+    """Reescreve os .cir do experimento anterior com caminhos relativos.
+    Nao simula: so regenera o netlist, para que fiquem reprodutiveis em
+    outra maquina (CLAUDE.md §9)."""
+    cfg = [("baseline",  dict(inv1=INV1_BASELINE))]
+    cfg += [(f"base_ts{t}", dict(inv1=INV1_BASELINE, tstep=t))
+            for t in ["5u", "2u", "1u", "0.5u"]]
+    cfg += [(f"ib_{b}", dict(ib=b, tstep="0.5u")) for b in ["1n","10n","100n","1u"]]
+    cfg += [(f"conv_10n_{t}", dict(ib="10n", tstep=t))
+            for t in ["1u","0.5u","0.25u","0.1u"]]
+    cfg += [(f"fi_10n_{i}", dict(ib="10n", iin=i, tstop=ts, tstep="0.5u"))
+            for i, ts in [("1p","900m"),("3p","400m"),("10p","150m"),
+                          ("30p","60m"),("100p","30m")]]
+    n = 0
+    for name, kw in cfg:
+        p = dict(inv1=INV1_STARVED, ib="1n", iin="10p", cmem="100f",
+                 cfb="20f", vdd="1.8", tstop="100m", tstep="2u")
+        p.update(kw)
+        open(f"{RAW}/{name}.cir", "w").write(
+            netlist(name, p["inv1"], p["ib"], p["iin"], p["cmem"],
+                    p["cfb"], p["vdd"], p["tstop"], p["tstep"]))
+        n += 1
+    return n
