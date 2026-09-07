@@ -38,6 +38,11 @@ Cload out 0 5f
 
 .include spice/models/generic_l1.mod
 
+* --- OBRIGATORIO: sem isto o abstol padrao (1e-12 A = 1 pA) e da ordem
+* --- do sinal, e a simulacao inteira vira ruido numerico. Ver revalidacao.
+.options abstol=1e-15 vntol=1e-9 reltol=1e-4 gmin=1e-15 chgtol=1e-16
++ trtol=1
+
 .control
 set filetype=ascii
 tran 5u 60m 0 5u
