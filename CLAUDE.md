@@ -342,8 +342,22 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
     Um modelo montado das três grandezas medidas (janela, `Ctot`, curva de fuga) reproduz a
     **frequência absoluta dentro de 3,4%** mas prevê a curvatura em **+1,62%** contra os
     **−2,53%** medidos — **erra o sinal**, por 4,15 pontos percentuais.
-    **Candidato ainda não testado:** que os −2,53% estejam dentro da barra de erro do próprio
-    ajuste da f–I e não sejam efeito físico. A incerteza daquele ajuste nunca foi calculada.
+    **NÃO é ruído de ajuste — hipótese corrigida em 2026-09-07.** Os −2,53% não são resíduo de
+    regressão: são a **razão entre duas frequências medidas diretamente**, cada uma com CV do
+    ISI de ~0,005% e convergência de 0,000% sobre 16× de `tstep`. A incerteza da razão é da
+    ordem de **0,01%**, e o efeito é **~250× isso**. Calcular a barra de erro do ajuste da f–I
+    continua valendo como escrituração, mas **não dissolve este número**.
+
+    **Status: ressalva ABERTA e NÃO BLOQUEANTE.** Não é critério de saída de etapa nenhuma. São
+    2,5% no ponto extremo e menos usado da faixa (1 pA, f = 13,6 Hz). Não perseguir agora.
+
+    **Palpite do Claude, não testado, registrado como palpite e não como direção de trabalho:**
+    o período tem uma parte de **rampa** e uma de **disparo**. A de rampa escala com `Iin` por
+    construção. A de disparo tem dois componentes: um que escala com `Iin` e outro **limitado
+    pela taxa do espelho** (`IB1` = 10 nA fixa a velocidade de `n1` independentemente de
+    `Iin`), que **não** escala. A competição entre os dois muda de peso ao longo da faixa e é
+    candidata a produzir curvatura. **O teste é decompor o período** em rampa e disparo e medir
+    cada parcela contra `Iin` — para quando isso voltar a importar.
 
 15. **A junção de dreno do `Mrst` conduz DIRETO quando `mem` < 0**, injetando até **+3,7 pA**
     em −0,127 V — 37% de `Iin` no ponto nominal e **370%** em `Iin` = 1 pA.
@@ -484,6 +498,21 @@ espelho em 0 V põe o transistor diodo com Vsg = VDD, muito acima da corrente de
 a simulação **aborta**: `Timestep too small; initial timepoint: trouble with node "rpN"`.
 Confirmado em 2026-09-07. Calcule o palpite, não arbitre — para PMOS em ligação diodo,
 `V(rp) = VDD − (|VTO| + √(2·IB/(KP·W/L)))`.
+
+**`Ctot` do nó de membrana: 129,71 fF, medido.** Espalhamento de **0,05%** sobre dois decades
+de `Iin` (2026-09-07). Contra os **120 fF** de `Cmem` + `Cfb` ideais, sobram **9,7 fF** de
+capacitância de porta de `M1p`/`M1n` e de junção — ordem fisicamente coerente para 1,5 µm² de
+área de porta neste nó. Use este valor em vez de estimar `Ctot` por soma de nominais.
+
+**Armadilha de contagem dupla: `Ctot` medido pela rampa JÁ CONTÉM a fuga.** Medindo
+`Ctot = Iin/(dV/dt)`, o que se obtém não é `Ctot`: é
+`Ctot_real · Iin/(Iin − fuga)`, porque `dV/dt = (Iin − fuga)/Ctot_real`. O valor vem inflado —
+**+5,70% em `Iin` = 1 pA** com a fuga de 60 fA deste circuito, e o inflacionamento **cresce
+quando `Iin` cai**, imitando perfeitamente uma capacitância que varia. **Somar esse `Ctot`
+aparente a um termo de fuga separado é contar o mesmo efeito duas vezes.** Ou se desconta a
+fuga do `Ctot` medido, ou se usa o `Ctot` aparente sozinho — nunca os dois.
+Verificação que estabeleceu isto: a razão prevista pela curva de fuga era +5,745% e a medida
++5,701%, concordando em 0,04 ponto percentual.
 
 **Corrente estática se mede por ponto de operação DC, nunca por média de transiente.**
 O critério de convergência de um ramo é `reltol·|I| + abstol`, e o `|I|` que manda é o **maior
