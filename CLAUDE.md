@@ -24,7 +24,7 @@ compreensão de cena — nessas tarefas uma GPU comum é largamente superior.
 | Etapa | Descrição | Situação |
 |---|---|---|
 | 0 | Neurônio axon-hillock em ngspice, modelos nível 1 | **Concluída e revalidada.** Ressalvas numéricas fechadas (§5); **consumo resolvido** em 2026-09-06 (12,6 µW → 83,5 nW) e topologia confirmada. Pendências não bloqueantes em §5-A |
-| 1 | Migrar para PDK SkyWater 130 nm | **NEURÔNIO MIGRADO** em 2026-09-07, canto `tt`, 27 °C. f–I reproduz o nível 1 (ganho 13,886 contra 13,794 Hz/pA, +0,7%). Consumo **14× menor**: 6,03 nW contra 85,4. **Pulso reprova**: 88,84% contra o mínimo de 90%. Ver `resultados/2026-09-07_migracao_sky130/` |
+| 1 | Migrar para PDK SkyWater 130 nm | **EM ANDAMENTO — não concluída.** Neurônio migrado em 2026-09-07 (canto `tt`, 27 °C): f–I reproduz o nível 1 (ganho 13,886 contra 13,794 Hz/pA, +0,7%), consumo **14× menor** (6,03 nW contra 85,4), **43,2 pJ por disparo**. O pulso **passa no critério funcional** (§7): aciona o receptor com margens de 0,894 e 0,730 V e estática de 0,44 pW. *O critério antigo de "≥ 90% de VDD" foi revogado em `fa20a70` — era arbitrário; o circuito nunca esteve errado.* **Faltam 3 critérios de saída:** fuga no nó `mem` medida diretamente, janela de histerese medida, e varredura de `Cmem` no sky130. Ver `resultados/2026-09-07_migracao_sky130/` e `2026-09-07_receptor/` |
 | 2 | Monte Carlo (descasamento) | Não iniciada — maior risco do projeto |
 | 3–10 | Cantos, par acoplado, coincidência, AER/FPGA, layout, tapeout | Não iniciadas |
 
