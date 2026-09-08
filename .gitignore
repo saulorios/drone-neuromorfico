@@ -13,3 +13,8 @@ resultados/rodada_atual/
 # Python
 __pycache__/
 *.pyc
+
+# O repositorio nao viaja mais em .zip — ele tem URL.
+# Guarda contra `git add -A` varrer um arquivao para dentro: foi assim que
+# 233 MB entraram no banco de objetos em 2026-09-08 (CLAUDE.md §7).
+*.zip
