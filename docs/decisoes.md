@@ -5,6 +5,55 @@ valiosa que o descarte. Ordem cronológica inversa (mais recente no topo).
 
 ---
 
+## 2026-09-07 — Plano de etapas v2.0; dossiê v1.0 preservado como registro histórico
+
+**O quê.** `docs/dossie.pdf` renomeado para **`docs/dossie_v1.0.pdf`** (via `git mv`, com
+histórico preservado) e **mantido**. Plano de etapas v2.0 em **`docs/etapas.md`**.
+
+**Por que preservar o dossiê.** Ele é o registro do que se acreditava em setembro de 2026.
+Metade do valor deste projeto está em poder comparar o que se **pensava** com o que se
+**mediu** — o achado central invertido, o `Mrst` que virou dispositivo crítico, o consumo que
+caiu 14× por um mecanismo não previsto. Apagar o v1.0 apagaria a metade da evidência.
+
+**Estado por parte, registrado no topo do `CLAUDE.md`:**
+
+| Parte do dossiê v1.0 | Estado |
+|---|---|
+| Parte 7 — plano de etapas | **substituída** por `docs/etapas.md` |
+| Parte 4 — resultados | **superada** por `resultados/` e pela §4 do `CLAUDE.md` |
+| Partes 1, 2, 3, 5, 6 | continuam válidas |
+
+**Conferência do `docs/etapas.md` contra o repositório.** O arquivo foi escrito a partir da
+conversa e não do repositório, então foi auditado número a número. **Sete discrepâncias
+encontradas e reportadas ao autor, nenhuma corrigida em silêncio** — as correções são decisão
+dele. Em resumo, da mais para a menos grave:
+
+1. **A tabela de abertura compara circuitos diferentes.** "158 → 139,58 Hz" e
+   "17,5 → 13,89 Hz/pA" põem o circuito **original** do nível 1 contra o circuito **com fome
+   de corrente** do sky130, misturando mudança de topologia com mudança de modelo. A
+   comparação de mesma topologia está medida e é outra: **138,28 → 139,58 Hz (+0,9%)** e
+   **13,794 → 13,886 Hz/pA (+0,7%)**. A tabela sugere que o PDK mudou muito essas duas
+   grandezas; ele quase não mudou.
+2. **Os valores 158 Hz e 17,5 Hz/pA foram descartados**, não corrigidos, pela revalidação de
+   2026-09-06 — os do nível 1 são 160,3 Hz e 16,0 Hz/pA.
+3. **"7 → 9 dispositivos" está errado nas duas pontas.** O netlist da etapa 0 tinha **5**
+   transistores, não 7 (o "7 transistores" do dossiê nunca bateu com o próprio netlist). E
+   hoje são **7 por neurônio** mais **2 de referência compartilhados**.
+4. **"área ativa dos 9 dispositivos = 15,5 µm²"** — os 15,5 µm² são dos **7 do neurônio**. Os
+   9 somam **25,5 µm²**. O número está certo, o rótulo não.
+5. **A verificação de variação de capacitância no PDK aparece como pendente**, mas já foi
+   feita em 2026-09-07 e está no `CLAUDE.md` §7-A R1: o mismatch existe embutido no modelo MiM
+   (σ = 2,8%/√área) e está **desligado por padrão** (`mc_mm_switch = 0`).
+6. **Preços de shuttle apresentados como fato corrente** sem fonte verificável no repositório.
+7. **Atribuições e contagens menores:** os espelhos vieram do trabalho de consumo *posterior*
+   à etapa 0, não "da etapa 0"; o jitter é 22% no pior ponto e ~20% típico; e a série de erros
+   de instrumento tem **quatro** membros, não três.
+
+**Nenhuma correção aplicada.** O `etapas.md` foi movido e o dossiê renomeado; o conteúdo do
+plano é do autor.
+
+---
+
 ## 2026-09-07 — Etapa 1 concluída, invertendo o achado central
 
 **Fontes:** `resultados/2026-09-07_migracao_sky130/`, `_receptor/`, `_fuga_mem/`,

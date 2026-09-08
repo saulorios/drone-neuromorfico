@@ -1,8 +1,18 @@
 # Drone Neuromórfico — contexto do projeto
 
 > Este arquivo é a memória do projeto. Está estruturado conforme a Parte 9.3 do
-> dossiê (`docs/dossie.pdf`). Atualize-o ao fim de cada etapa.
-> Última atualização: 2026-09-06.
+> dossiê (`docs/dossie_v1.0.pdf`). Atualize-o ao fim de cada etapa.
+> Última atualização: 2026-09-07.
+>
+> **Estado do dossiê v1.0.** Ele é preservado como registro do que se acreditava em
+> setembro de 2026 — metade do valor deste projeto está em poder comparar o que se
+> pensava com o que se mediu. Mas duas de suas partes já não valem:
+>
+> | Parte do dossiê v1.0 | Estado |
+> |---|---|
+> | **Parte 7** (plano de etapas) | **SUBSTITUÍDA** por [`docs/etapas.md`](docs/etapas.md) |
+> | **Parte 4** (resultados da simulação) | **SUPERADA** por `resultados/` e pela §4 deste arquivo |
+> | Partes 1, 2, 3, 5 e 6 | **continuam válidas** |
 
 ---
 
