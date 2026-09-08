@@ -41,13 +41,47 @@ compreensão de cena — nessas tarefas uma GPU comum é largamente superior.
 Nenhum hardware foi construído. Todo número neste repositório vem de simulação ou de
 literatura, e a origem está sempre indicada.
 
-**Ambiente desta máquina (verificado em 2026-09-06):** Ubuntu 24.04. **ngspice NÃO está
-instalado**; `numpy` e `matplotlib` **não estão instalados** no Python padrão
-(`~/miniconda3/bin/python3`); nenhum PDK presente. Disco: 20 GB livres de 468 GB (96%
-ocupado) — restrição real para instalar o sky130. Os scripts em `scripts/` **não foram
-executados nesta máquina**; foram herdados da etapa 0, rodada em outro ambiente. A
-revalidação de 2026-09-06 também foi executada fora deste ambiente — os números da §4 vêm
-de `resultados/2026-09-06_revalidacao_etapa0/revalidacao.md`, não de execução local.
+**Ambiente desta máquina (reverificado em 2026-09-08 — o registro de 2026-09-06 estava
+desatualizado e foi substituído).** Ubuntu 24.04.
+
+| | estado em 2026-09-08 | dizia o registro de 2026-09-06 |
+|---|---|---|
+| ngspice | **duas versões presentes** (ver abaixo) | não instalado |
+| `numpy` / `matplotlib` | **2.5.3 / 3.11.0**, no `~/miniconda3/bin/python3` | não instalados |
+| PDK sky130A | **presente**, 127 MB em `spice/models/sky130` | ausente |
+| disco livre | **26 GB** de 468 GB (95% ocupado) | 20 GB |
+
+**Duas versões de ngspice, e a distinção é obrigatória:**
+
+| | caminho | papel |
+|---|---|---|
+| **41** | `~/miniconda3/bin/ngspice` (do PATH) | **NÃO usar em medida deste projeto** |
+| **42** | `~/opt/ngspice42/bin/ngspice42` | **a versão do projeto** — todas as etapas 0 e 1 |
+
+Toda a etapa 1 foi medida em **ngspice 42**, e a §5-A item 9 tem aberta uma divergência de
+**11% na potência da linha de base entre 41 e 42**, ainda não separada. Como a etapa 2
+normaliza dispersão contra um nominal medido na 42, rodar na 41 injetaria uma variável não
+separada dentro da medida de maior risco do projeto. **Exporte `NGSPICE_BIN` apontando para
+a 42 antes de rodar qualquer script.**
+
+**Como a 42 foi instalada, sem sudo** (reproduzível; feito em 2026-09-08, o repositório do
+Ubuntu noble entrega exatamente `42+ds-3build1`):
+
+```bash
+apt-get download ngspice libngspice0        # nao precisa de root
+mkdir -p ~/opt/ngspice42
+for d in *.deb; do dpkg-deb -x "$d" ~/opt/ngspice42; done
+# wrapper ~/opt/ngspice42/bin/ngspice42 exporta LD_LIBRARY_PATH e SPICE_LIB_DIR
+```
+
+**O que 41 e 42 concordam, medido em 2026-09-08:** o ponto de operação DC é idêntico bit a
+bit nos dois dispositivos usados pelo circuito — `nfet_01v8` W=1 L=0.15 em Vgs=Vds=1,8 V dá
+**501,046 µA** e `pfet_01v8` W=1 L=0.15 em |Vgs|=|Vds|=1,8 V dá **200,748 µA** nas duas
+versões. **A divergência de 11%, se real, não está no DC** — está no transiente ou na
+medida de potência. Isso estreita a busca do item 9 mas não o fecha.
+
+Os scripts em `scripts/` foram herdados das etapas 0 e 1, rodadas em outro ambiente; os
+números da §4 vêm dos relatórios em `resultados/`, não de execução local.
 
 ---
 
@@ -573,6 +607,33 @@ Nos dois casos o **circuito** estava certo e o **critério** estava errado. Anco
 grandezas funcionais — corrente entregue, transição completa, margem de ruído — ou em
 grandezas medidas no modelo novo. Nunca numa constante do modelo velho.
 
+**Lição de método: cadeia de `.include` do PDK se percorre até o fim, ou não se percorre.**
+Erro cometido pelo Claude em 2026-09-08 e registrado porque quase virou um veredito.
+
+Investigando se o `pfet_01v8` tem modelo de descasamento no canto `tt`, contei ocorrências de
+`MC_MM_SWITCH` nos arquivos que `corners/tt.spice` inclui diretamente:
+
+| arquivo incluído por `corners/tt.spice` | ocorrências de `MC_MM_SWITCH` |
+|---|---|
+| `sky130_fd_pr__nfet_01v8__tt.pm3.spice` | 540 |
+| `sky130_fd_pr__pfet_01v8__tt.corner.spice` | **0** |
+
+**Conclusão tirada: o PMOS não tem descasamento no canto `tt`.** Ela era falsa. O
+`__tt.corner.spice` do pfet tem **20 linhas**, das quais 13 são licença e 2 são `.param` —
+e a **última linha** é `.include "sky130_fd_pr__pfet_01v8__tt.pm3.spice"`, arquivo de 29 626
+linhas com 432 ocorrências de `MC_MM_SWITCH`. Os dois dispositivos têm descasamento.
+
+**Por que o erro era perigoso e não apenas errado.** Ele não produziria um número errado:
+produziria uma **decisão de arquitetura** — "não dá para fazer Monte Carlo dos espelhos neste
+PDK" — apoiada num `grep` que estava tecnicamente correto e semanticamente vazio. Um erro que
+recomenda parar é tão caro quanto um que recomenda seguir.
+
+**Regra que fica:** ao afirmar que algo *não existe* num PDK, a evidência tem que ser a
+expansão completa da cadeia ou uma execução que falha — nunca a ausência de um padrão num
+nível da árvore. Ausência de evidência num nível é evidência de nada.
+Verificação que teria pego na hora: `grep -c '^.subckt' `no arquivo. Um arquivo de corner que
+não define o subcircuito do dispositivo **necessariamente** o inclui de outro lugar.
+
 **sky130: `W` e `L` são número puro em micrômetros.** Nos subcircuitos do `sky130_fd_pr`,
 escreva `W=1 L=0.15`, **nunca** `W=1u L=0.15u`. A sintaxe com sufixo entrega 1e-06 ao
 seletor de binning do BSIM4, que **aborta** com `could not find a valid modelname`.
@@ -581,10 +642,32 @@ resultado contaminado, mas o netlist não roda. Referência de sanidade:
 `sky130_fd_pr__nfet_01v8` com `W=1 L=0.15` em Vgs = Vds = 1,8 V, canto `tt`, 27 °C, dá
 **501,0 µA**.
 
-**Não acrescentar `.option scale=1u` ao usar `.lib sky130.lib.spice`.** O `scale` está em
-`libs.tech/ngspice/all.spice`, mas não na cadeia do `.lib` → `corners/tt.spice`. Com números
-puros o resultado é idêntico com e sem ele (verificado: 501,05 µA nos dois casos). Pôr o
-`scale` "por precaução" não ajuda e confunde quem ler o netlist depois.
+**Não acrescentar `.option scale=1u` ao usar `.lib sky130.lib.spice` — mas o motivo
+registrado até 2026-09-07 estava ERRADO.** A conclusão prática sobrevive; a explicação não.
+
+O registro antigo dizia que o `scale` "está em `all.spice`, mas não na cadeia do `.lib` →
+`corners/tt.spice`". **Está na cadeia.** O caminho completo, verificado em 2026-09-08:
+
+```
+sky130.lib.spice          →  .include "corners/tt.spice"
+corners/tt.spice:29       →  .include "../all.spice"
+all.spice:2               →  .option scale=1.0u
+```
+
+**A explicação correta:** `.option scale` fixa um valor, não multiplica. Acrescentar
+`.option scale=1u` ao netlist reescreve 1e-6 por cima de 1e-6 e não muda nada — por isso o
+teste deu 501,05 µA com e sem, e por isso o resultado errado pareceu confirmar o motivo
+errado. Se `.option` fosse cumulativo, o mesmo teste teria falhado ruidosamente.
+
+**Consequência que só a explicação correta entrega:** o `scale` de 1 µm **já está ativo em
+toda simulação deste projeto**, o que é exatamente por que `W=1 L=0.15` significa 1 µm por
+0,15 µm. As duas convenções — número puro no `W`/`L` e não escrever o `scale` — não são
+independentes: são a mesma coisa vista de dois lados. Com o motivo errado, alguém que
+precisasse desligar o `scale` concluiria que não há `scale` para desligar.
+
+**Por que o erro sobreviveu:** ele foi verificado por experimento (o número bateu) e não
+pela cadeia de `.include`. Um experimento que passa por um motivo e é creditado a outro é
+indistinguível de um experimento que passa.
 
 **`.nodeset` obrigatório em netlist com espelho de corrente.** Com `uic`, o ngspice pula o
 ponto de operação DC e parte de 0 V em todo nó fora do `.ic`. O nó de referência de um
@@ -697,11 +780,19 @@ dispersão de capacitância vira **dispersão de frequência diretamente**.
 | mismatch no modelo do capacitor | **existe, embutido no subcircuito** |
 | como está expresso | `czero = carea + cperim + MC_MM_SWITCH·AGAUSS(0,1,1)·0,01·2,8·(carea+cperim)/sqrt(wc·lc·mf)` |
 | σ implicado | **2,8% ÷ √(área em µm²)** |
-| **estado padrão** | ⚠️ **DESLIGADO** — `sky130.lib.spice` define `mc_mm_switch = 0` em **todos** os cantos |
+| **estado padrão** | ⚠️ **DESLIGADO** nos cantos normais (`tt`, `ss`, `ff`, `sf`, `fs`, `ll`, `hh`, `hl`, `lh`): `mc_mm_switch = 0` |
+| **como ligar** — verificado em 2026-09-08 | existe um canto `*_mm` para cada um (`tt_mm`, `ss_mm`, …) que difere **só** por `mc_mm_switch = 1`; os `.include` são idênticos. Use `.lib ... tt_mm`, não edite o PDK |
 | variação global de capacitância | disponível como cantos `cap_high` / `cap_low` em `libs.tech/ngspice/r+c/`, **não** selecionados pelo canto `tt` |
 
-**A armadilha concreta:** rodar Monte Carlo sem `mc_mm_switch = 1` faz os capacitores **não
-variarem nada** — não é que variem pouco, é que a contribuição é exatamente **zero**. O
+**A armadilha concreta é PIOR do que este registro dizia, corrigido em 2026-09-08.** Não
+basta ligar o switch: `Cmem`, `Cfb` e `Cload` são elementos `C` **ideais** do SPICE, sem
+modelo nenhum. Um `C` ideal não tem `czero`, não tem `AGAUSS` e não tem o que variar —
+**a contribuição dos capacitores é exatamente zero com o switch ligado ou desligado.** A
+fórmula da tabela acima só age se o capacitor for instanciado como
+`sky130_fd_pr__cap_mim_m3_1`, o que este circuito não faz.
+
+Rodar Monte Carlo sem `mc_mm_switch = 1` faz os **transistores** não variarem nada — não é
+que variem pouco, é que a contribuição é exatamente **zero**. O
 histograma de frequência sairia artificialmente estreito, e a decisão da etapa 2 entre
 "transistores maiores" e "calibração individual" seria tomada sobre um número otimista.
 
@@ -726,6 +817,33 @@ contribuição dos capacitores aparece.**
 Ver §5-A item 15b. Injeção de até 3,7 pA no substrato a cada disparo, num circuito cujo
 **sinal também é de pA**. Mitigação por anel de guarda custa área, e amarra-se a R1 e à
 contagem de neurônios.
+
+### R4 · O descasamento sub-limiar do PMOS não tem contrapartida no NMOS — **e os dois espelhos são PMOS**
+
+Verificado nos arquivos `__mismatch.corner.spice` do PDK em 2026-09-08. Os dois dispositivos
+deste circuito não recebem o mesmo tratamento estatístico:
+
+| parâmetro (slope de Pelgrom, em V·µm salvo indicado) | `nfet_01v8` | `pfet_01v8` |
+|---|---|---|
+| `vth0_slope` | 3,356e-3 | **5,856e-3** — 1,74× maior |
+| `voff_slope` | 7,0e-3 | 0 (mas `voff_slope2` = 7,0e-3) |
+| **`nfactor_slope`** (adimensional·µm) | **0,0** | **0,1** |
+| `toxe_slope` (relativo) | 3,443e-3 | 4,443e-3 |
+
+**Por que `nfactor` é o item que importa aqui.** `nfactor` governa a inclinação sub-limiar —
+quantos milivolts de porta são necessários para mudar a corrente por década abaixo do limiar.
+Ele **só** afeta a corrente sub-limiar; em inversão forte é quase irrelevante. Este circuito
+opera **inteiramente** em sub-limiar: `Iin` de 1 a 100 pA, `IB1` = 10 nA, `IB2` = 3 µA num
+dispositivo W/L = 5. E **os dois espelhos de fome de corrente são PMOS** — `Mbp1`/`Mref1` e
+`Mbp2`/`Mref2`. O parâmetro estatístico que mais afeta a região onde o circuito vive existe
+para o tipo de dispositivo que carrega o caminho mais sensível, e não existe para o outro.
+
+**A estimativa de 11% de σ(IB)/IB é PISO, não estimativa.** Ela vem só de `vth0`:
+σ(Vth) = 5,856e-3 ÷ √5 µm² = 2,62 mV por dispositivo, 3,70 mV no par, dividido por
+n·Ut ≈ 33,7 mV a 27 °C. **Não inclui `nfactor`, que não tem conversão linear para corrente**
+(entra no expoente, não no numerador) e cuja contribuição pode ser maior que a de `vth0`.
+Qualquer número menor que 11% na etapa 2 é motivo para desconfiar do instrumento antes de
+comemorar. Denominador: `IB` nominal, dispositivos `W=0,5 L=10` e `W=5 L=1`, ambos 5 µm².
 
 ### R3 · `Mrst` é dispositivo crítico de casamento
 
