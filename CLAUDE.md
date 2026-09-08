@@ -76,6 +76,43 @@ O produto `f·Ctot` varia 21,4%: o modelo é aproximado, mas 16× mais estável 
 | pulso de `out` | 1,01 a 1,80 V | 0,72 a 0,82 V, sem excursão lógica |
 | f com `Cmem` | **cai** | **sobe** |
 
+**O MECANISMO DA INVERSÃO — por que o cancelamento evaporou.** O cancelamento exigia que a
+janela de histerese fosse `VDD·Cfb/Ctot`, isto é, que ela **encolhesse na mesma proporção em
+que `Ctot` cresce**. Só assim `T = Ctot·ΔV/Iin` fica independente de `Cmem`.
+
+A janela medida diz que não é isso:
+
+| parcela da janela em `Cmem` = 100 fF | valor | encolhe com `Ctot`? |
+|---|---|---|
+| divisor capacitivo `VDD·Cfb/Ctot` | 0,278 V (**41%**) | **sim** |
+| distância entre limiar de comutação e fundo do undershoot | 0,402 V (**59%**) | **não** — são tensões absolutas |
+| **janela medida** | **0,679 V** | fator **2,45×** sobre o divisor |
+
+**O chute capacitivo é minoria.** A maior parte da janela é a distância entre duas tensões
+**absolutas** — o limiar de comutação do primeiro inversor e o fundo do undershoot — e
+nenhuma das duas encolhe quando `Ctot` cresce. Por isso o cancelamento não se sustenta.
+
+**E por isso ele dependia do modelo:** no nível 1 o `V_th` menor deixava o termo do divisor
+dominar a janela, e o cancelamento aparecia. No sky130, com `V_th` maior, o termo absoluto
+domina e o cancelamento evapora.
+
+**Quantificando, com denominador.** Ajustando `f ∝ Ctot^-x` no mesmo intervalo (`Cmem` de 25 a
+200 fF, `Ctot` de 54,71 a 229,71 fF) nos dois modelos:
+
+| | expoente `x` | cancelamento restante |
+|---|---|---|
+| nível 1 | **0,16** | **84%** |
+| **sky130** | **0,85** | **15%** |
+| integrador sem cancelamento algum | 1,00 | 0% |
+
+**Sobrava 84% de cancelamento; sobram 15%.**
+
+**Nota de método:** a previsão de que o cancelamento seria geométrico e portanto independente
+do modelo era razoável — **e a medida da janela já a contradizia uma rodada antes**. O fator
+2,45× entre janela medida e divisor estava registrado em
+`resultados/2026-09-07_histerese/` e eu não tirei a consequência dele. O dado que refutava a
+hipótese já estava na mesa.
+
 **Por que o nível 1 dizia o contrário:** ele mantinha a excursão grande com `Cmem` grande
 (0,107 V em 800 fF contra 0,061 V no sky130), sustentando a compensação. No PDK a excursão
 colapsa antes e o circuito sai do regime.
@@ -97,8 +134,19 @@ o pulso perde excursão lógica e a frequência inverte de sentido.
 utilizável** para fixar a frequência. Antes só havia um botão, `Iin`. Agora há dois, e são
 independentes.
 
-**O impacto na área precisa ser reavaliado:** encolher `Cmem` continua possível, mas **sobe a
-frequência**. É compromisso acoplado, não economia livre.
+**O impacto na área — SEGUNDA correção.** A §4.3 do dossiê dizia que o capacitor não
+dominaria a área porque `Cmem` podia encolher livremente. Isso já havia sido corrigido uma vez
+em 2026-09-06, para "`Cfb` fixa a frequência e não pode encolher". **Agora `Cmem` também
+fixa.** Encolher **qualquer um dos dois** muda a frequência:
+
+| | fixa a frequência? | pode encolher livremente? |
+|---|---|---|
+| `Cfb` | sim (define o degrau de realimentação) | **não** |
+| `Cmem` | sim, `f ∝ Ctot^-0,85` | **não** |
+
+**Não há economia de área livre em capacitor neste circuito.** Os dois são compromissos
+acoplados com a frequência. O que sobra é escolher o ponto de operação sabendo o preço, não
+encolher de graça.
 
 **Impacto na área do chip:** `Cmem` pode encolher, mas **quem fixa a frequência é `Cfb`, e
 `Cfb` não pode encolher sem alterar o ganho f–I**. A área do neurônio continua dominada por
@@ -535,6 +583,14 @@ a simulação **aborta**: `Timestep too small; initial timepoint: trouble with n
 Confirmado em 2026-09-07. Calcule o palpite, não arbitre — para PMOS em ligação diodo,
 `V(rp) = VDD − (|VTO| + √(2·IB/(KP·W/L)))`.
 
+**Detector de disparo: limiar ADAPTATIVO, nunca fixo.** Use 50% da excursão do próprio
+`out` na janela medida, não uma fração de VDD. Em 2026-09-07 um limiar fixo de 0,9 V produziu
+um falso **"não dispara"** em `Cmem` = 400 e 800 fF, onde o pulso colapsa para 0,82 e 0,72 V —
+o circuito oscilava em regime estacionário e o detector é que não via. **É a mesma classe dos
+outros erros de instrumento deste projeto:** o `abstol` contra o sinal, o `reltol` contra o
+pico do ramo, a janela de média sem ciclos inteiros. Em todos, o que falhou foi a medida e não
+o circuito, e em todos o sintoma foi um resultado que parecia físico.
+
 **`Ctot` do nó de membrana: 129,71 fF, medido.** Espalhamento de **0,05%** sobre dois decades
 de `Iin` (2026-09-07). Contra os **120 fF** de `Cmem` + `Cfb` ideais, sobram **9,7 fF** de
 capacitância de porta de `M1p`/`M1n` e de junção — ordem fisicamente coerente para 1,5 µm² de
@@ -610,6 +666,62 @@ Os scripts leem `NGSPICE_BIN` (padrão: `ngspice` do PATH) e `RUN_TAG` (padrão:
 **Resultados:** uma pasta datada por rodada em `resultados/`. Nunca sobrescrever uma
 rodada anterior — comparar a simulação de hoje com a de duas semanas atrás é
 frequentemente o que revela um erro.
+
+---
+
+## 7-A · Riscos NOVOS, ausentes do mapa de riscos do dossiê §8
+
+Levantados por medida ao longo da etapa 1. O dossiê §8 não os contém e precisa recebê-los.
+
+### R1 · Descasamento de CAPACITOR vira dispersão de frequência — **novo na etapa 2**
+
+**Por que é novo.** Enquanto `Cmem` era irrelevante para a frequência, o casamento entre
+capacitores não precisava entrar no Monte Carlo. **Isso mudou:** `f ∝ Ctot^-0,85` (§3), então
+dispersão de capacitância vira **dispersão de frequência diretamente**.
+
+**O que o PDK oferece — verificado em 2026-09-07:**
+
+| | situação |
+|---|---|
+| arquivos `__mismatch.corner.spice` | existem para **transistores e resistores**; **nenhum para capacitor** |
+| mismatch no modelo do capacitor | **existe, embutido no subcircuito** |
+| como está expresso | `czero = carea + cperim + MC_MM_SWITCH·AGAUSS(0,1,1)·0,01·2,8·(carea+cperim)/sqrt(wc·lc·mf)` |
+| σ implicado | **2,8% ÷ √(área em µm²)** |
+| **estado padrão** | ⚠️ **DESLIGADO** — `sky130.lib.spice` define `mc_mm_switch = 0` em **todos** os cantos |
+| variação global de capacitância | disponível como cantos `cap_high` / `cap_low` em `libs.tech/ngspice/r+c/`, **não** selecionados pelo canto `tt` |
+
+**A armadilha concreta:** rodar Monte Carlo sem `mc_mm_switch = 1` faz os capacitores **não
+variarem nada** — não é que variem pouco, é que a contribuição é exatamente **zero**. O
+histograma de frequência sairia artificialmente estreito, e a decisão da etapa 2 entre
+"transistores maiores" e "calibração individual" seria tomada sobre um número otimista.
+
+**Ordem de grandeza esperada, se ligado.** Com densidade MiM da ordem de 2 fF/µm²
+(**a conferir no PDK, não medida**):
+
+| | área | σ de C |
+|---|---|---|
+| `Cmem` = 100 fF | ~50 µm² | 0,40% |
+| `Cfb` = 20 fF | ~10 µm² | 0,89% |
+| σ de `Ctot` | — | **0,33%** |
+| **σ de f pelos capacitores** | — | **~0,28%** |
+
+Contra os critérios da etapa 2 (dispersão pequena ≈ 5%, grande ≥ 40%), **os capacitores
+provavelmente não são o problema** — MiM casa bem, como se esperava. **Mas "provavelmente" não
+é medida**, e é justamente por parecer desprezível que o switch fica desligado e ninguém
+percebe. **Ação para a etapa 2: `mc_mm_switch = 1` explícito, e verificar no histograma que a
+contribuição dos capacitores aparece.**
+
+### R2 · Acoplamento por substrato entre neurônios vizinhos
+
+Ver §5-A item 15b. Injeção de até 3,7 pA no substrato a cada disparo, num circuito cujo
+**sinal também é de pA**. Mitigação por anel de guarda custa área, e amarra-se a R1 e à
+contagem de neurônios.
+
+### R3 · `Mrst` é dispositivo crítico de casamento
+
+Ver §5 item 4. `Wrst` variado 32× move a frequência 2,3×, então descasamento de `Mrst` vira
+dispersão de frequência. Soma-se a R1: a etapa 2 tem agora **três** caminhos de descasamento
+para a frequência — transistores do inversor, `Mrst`, e capacitores — onde o dossiê previa um.
 
 ---
 

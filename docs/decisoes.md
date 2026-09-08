@@ -5,6 +5,63 @@ valiosa que o descarte. Ordem cronológica inversa (mais recente no topo).
 
 ---
 
+## 2026-09-07 — Etapa 1 concluída, invertendo o achado central
+
+**Fontes:** `resultados/2026-09-07_migracao_sky130/`, `_receptor/`, `_fuga_mem/`,
+`_histerese/`, `_cmem_sky130/` — todas em ngspice 42, sky130A, canto `tt`, 27 °C.
+
+**Os seis critérios de saída fecharam.** Armadilha do W/L (é *fail-stop*, não silenciosa),
+neurônio migrado (f–I a 0,7% do nível 1, consumo 14× menor, 43,2 pJ por disparo), pulso
+aprovado no critério funcional, fuga em `mem` medida, janela de histerese medida, e varredura
+de `Cmem`.
+
+**E a etapa fecha invertendo o achado central do projeto.**
+
+| | nível 1 | sky130 |
+|---|---|---|
+| expoente de `f ∝ Ctot^-x` (25 a 200 fF) | **0,16** | **0,85** |
+| cancelamento restante | **84%** | **15%** |
+
+**O mecanismo, que fecha a história.** O cancelamento exigia que a janela de histerese fosse
+`VDD·Cfb/Ctot` e portanto encolhesse junto com `Ctot`. A janela medida é **0,679 V** contra os
+**0,278 V** do divisor — fator 2,45×. **O chute capacitivo é só 41% da janela.** Os outros 59%
+são a distância entre o limiar de comutação e o fundo do undershoot, que são tensões
+**absolutas** e não encolhem com `Ctot`. Daí a evaporação do cancelamento — e daí ele depender
+do modelo: no nível 1 o `V_th` menor deixava o termo do divisor dominar.
+
+**Nota de método que vale registrar.** A previsão de que o cancelamento seria geométrico e
+independente do modelo era razoável, **e a medida da janela já a contradizia uma rodada
+antes**. O fator 2,45× estava registrado e eu não tirei a consequência dele. O dado que
+refutava a hipótese já estava na mesa antes de eu apostar contra ele.
+
+**A decisão de projeto sobrevive com motivo melhor.** `Cmem` pequeno continua certo, agora
+porque `Cmem` > 200 fF empurra o circuito para fora do regime integra-e-dispara (CV do ISI
+piora 26×, o pulso perde excursão lógica, a frequência inverte de sentido). E há um ganho: o
+projeto passa a ter **dois botões independentes** de frequência, `Iin` e `Cmem`, onde
+acreditava ter um.
+
+**Segunda correção do impacto na área.** Já se havia corrigido para "`Cfb` fixa a frequência e
+não pode encolher". Agora `Cmem` também fixa. **Não há economia de área livre em capacitor
+neste circuito** — os dois são compromissos acoplados com a frequência.
+
+**Risco novo para a etapa 2, verificado no PDK.** Enquanto `Cmem` era irrelevante, o casamento
+entre capacitores não precisava entrar no Monte Carlo. Agora precisa. O modelo MiM do sky130
+**tem** mismatch embutido (σ = 2,8%/√área), mas `sky130.lib.spice` define `mc_mm_switch = 0`
+em todos os cantos — **desligado por padrão**. Rodar Monte Carlo sem ligá-lo dá contribuição
+capacitiva exatamente zero e um histograma artificialmente estreito. Registrado no `CLAUDE.md`
+§7-A como R1, junto com R2 (acoplamento por substrato) e R3 (`Mrst` crítico de casamento). A
+etapa 2 tem agora **três** caminhos de descasamento para a frequência, onde o dossiê previa um.
+
+**Quinto erro de instrumento da série.** Um detector com limiar fixo de 0,9 V produziu um falso
+"não dispara" contra um pulso colapsado para 0,82 V. Limiar adaptativo virou convenção. É a
+mesma classe do `abstol` contra o sinal, do `reltol` contra o pico do ramo, e da janela de
+média sem ciclos inteiros: em todos, o que falhou foi a medida, e em todos o sintoma foi um
+resultado que parecia físico.
+
+**Etapa 2 não iniciada.**
+
+---
+
 ## 2026-09-07 — Etapa 1 iniciada: PDK instalado e transistor isolado validado
 
 **Fonte:** [`resultados/2026-09-07_etapa1_pdk/validacao_pdk.md`](../resultados/2026-09-07_etapa1_pdk/validacao_pdk.md)
