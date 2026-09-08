@@ -1,0 +1,38 @@
+* conv_s4_ts0p125u - neuronio axon-hillock, sky130, canto tt_mm, 27 C, rndseed=4
+.lib spice/models/sky130/sky130A/libs.tech/ngspice/sky130.lib.spice tt_mm
+.temp 27
+
+Vdd1 vdd1 0 1.8
+Vdd2 vdd2 0 1.8
+Vddr vddr 0 1.8
+
+* --- ramos de referencia do espelho ---
+Iref1 rp1 0 DC 10n
+XMref1 rp1 rp1 vddr vddr sky130_fd_pr__pfet_01v8 W=0.5 L=10
+Iref2 rp2 0 DC 3u
+XMref2 rp2 rp2 vddr vddr sky130_fd_pr__pfet_01v8 W=5   L=1
+
+* --- neuronio ---
+Iin 0 mem DC 10p
+Cmem mem 0 100f
+XMbp1 sp1 rp1 vdd1 vdd1 sky130_fd_pr__pfet_01v8 W=0.5 L=10
+XM1p  n1  mem sp1  vdd1 sky130_fd_pr__pfet_01v8 W=2   L=0.5
+XM1n  n1  mem 0    0    sky130_fd_pr__nfet_01v8 W=1   L=0.5
+XMbp2 sp2 rp2 vdd2 vdd2 sky130_fd_pr__pfet_01v8 W=5   L=1
+XM2p  out n1  sp2  vdd2 sky130_fd_pr__pfet_01v8 W=4   L=0.5
+XM2n  out n1  0    0    sky130_fd_pr__nfet_01v8 W=2   L=0.5
+Cfb out mem 20f
+XMrst mem out 0 0 sky130_fd_pr__nfet_01v8 W=0.5 L=2
+Cload out 0 5f
+
+.option seed=4
+.options abstol=1e-15 vntol=1e-9 reltol=1e-4 gmin=1e-15 chgtol=1e-16
++ trtol=1
+.nodeset v(rp1)=1.1 v(rp2)=1.05
+.ic v(mem)=0 v(out)=0
+.control
+set filetype=ascii
+tran 0.125u 150m 0 0.125u uic
+wrdata resultados/2026-09-08_etapa2_instrumento/raw/conv_s4_ts0p125u.txt v(mem) v(out) v(n1) i(vdd1) i(vdd2)
+.endc
+.end

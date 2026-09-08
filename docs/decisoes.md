@@ -5,6 +5,61 @@ valiosa que o descarte. Ordem cronológica inversa (mais recente no topo).
 
 ---
 
+
+## 2026-09-08 — Etapa 2, rodada 1: instrumento validado, e a semente não era semente
+
+**Fonte:** [`resultados/2026-09-08_etapa2_instrumento/instrumento.md`](../resultados/2026-09-08_etapa2_instrumento/instrumento.md)
+— ngspice 42, sky130A, cantos `tt` e `tt_mm`, 27 °C. Previsões commitadas em `3b0400c`,
+antes de qualquer execução.
+
+**Cinco confirmadas, duas refutadas, uma fora da faixa por pouco.** O motor estatístico do
+sky130 funciona: sorteia por instância (100 valores distintos em 100 cópias de geometria
+idêntica — inclusive no array que replica `Mbp2`/`Mref2`, o par do 2º espelho, que era o
+modo de falha perigoso pré-registrado); a magnitude bate com os slopes do PDK a 1,046× e
+1,072× em sub-limiar para os dois arrays de nfet; a lei de Pelgrom confere em dois regimes
+de polarização independentes (1,944 e 1,952 contra 2,000 geométrico); o controle negativo
+dá σ(f) = **zero exato**, com seis arquivos de 49 MB compartilhando um SHA-256.
+
+**O achado que muda o procedimento: `set rndseed` no `.control` NÃO fixa o sorteio.** Os
+`.model` com `AGAUSS` são avaliados na leitura do netlist; o `.control` executa depois. A
+semente chega tarde e cada execução sorteia de novo. `.option seed=N` fixa.
+
+**Como caiu, e não foi o teste que deveria pegar.** O V2 comparou arquivos, viu que
+diferiam, e eu li isso como "a semente funciona". Quem derrubou foi o teste de
+convergência: **+4,84%** ao dividir `tstep` por 4, num circuito que converge a 0,002%. O
+desempate foi pôr um `op` antes do `tran` — um ponto de operação DC não pode depender do
+`tstep`, e ele mudou 9,5 mV. Não era o integrador; era outra amostra. Refeito com
+`.option seed`, o desvio ficou em **−0,0006%**: fator 8 000×.
+
+**É a quarta ocorrência da mesma classe de falha do projeto** — `abstol` contra o sinal,
+`reltol` contra o pico do ramo, limiar fixo contra pulso colapsado, e agora semente contra
+ordem de avaliação. Em todas o instrumento falhou e o sintoma foi um número limpo.
+
+**Duas previsões minhas refutadas, e a segunda vale mais que a primeira.** (1) Previ que a
+ngspice sem semente repetiria o sorteio — repete o contrário. (2) Previ σ(f)/f > 2% no
+neurônio com descasamento; medido **1,762%**. O erro é pequeno, o que ele expõe não é:
+1,76% é **6,2× menor** que os ~11% de piso estimado para o descasamento de corrente dos
+espelhos. A corrente descasa muito mais que a frequência, e o motivo não foi testado.
+
+**E um erro de método que repeti depois de tê-lo escrito.** Pré-registrei que o modo de
+falha mais provável do V3 era "subestimar, como já aconteceu duas vezes na etapa 1".
+Aconteceu de novo: dispensei o `voff` com uma frase, e o `voff_slope` do nfet é **2,1×
+maior** que o do `vth0`. Incluído, os nfet batem a 1,05× e 1,07×.
+
+**Evidência para o risco R4, não prova.** O pfet excede em 1,33× em sub-limiar, e o `voff`
+não explica — `voff_slope` do `pfet_01v8` é zero neste bin. O único termo estatístico
+restante específico do PMOS é `nfactor_slope` = 0,1. Eliminei os outros; não isolei este.
+
+**Três correções de registro na mesma rodada.** O ambiente da §2 estava desatualizado
+(ngspice 42 agora instalada em prefixo local, sem sudo); o motivo registrado para não
+acrescentar `.option scale=1u` estava errado — o `scale` **está** na cadeia do `.lib`, e o
+que salva é `.option` sobrescrever em vez de multiplicar; e fica registrado meu erro de
+parar um nível cedo na cadeia de `.include` do pfet, que quase virou o veredito falso de
+que o PMOS não tem modelo de descasamento.
+
+**Rodada 2 não iniciada.** A medida continua sendo o maior risco do projeto.
+
+---
 ## 2026-09-07 — Plano de etapas v2.0; dossiê v1.0 preservado como registro histórico
 
 **O quê.** `docs/dossie.pdf` renomeado para **`docs/dossie_v1.0.pdf`** (via `git mv`, com

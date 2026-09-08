@@ -8,3 +8,4 @@ spice/models/sky130*/
 
 # Saidas brutas volumosas do ngspice (netlists .cir sao versionados)
 resultados/*/raw/*.txt
+resultados/*/raw/*.txt.gz

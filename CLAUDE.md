@@ -35,7 +35,7 @@ compreensão de cena — nessas tarefas uma GPU comum é largamente superior.
 |---|---|---|
 | 0 | Neurônio axon-hillock em ngspice, modelos nível 1 | **Concluída e revalidada.** Ressalvas numéricas fechadas (§5); **consumo resolvido** em 2026-09-06 (12,6 µW → 83,5 nW) e topologia confirmada. Pendências não bloqueantes em §5-A |
 | 1 | Migrar para PDK SkyWater 130 nm | **CONCLUÍDA em 2026-09-07.** Os seis critérios de saída fechados: armadilha do W/L, neurônio migrado, fuga em `mem` medida, janela de histerese medida, fator 1,76× resolvido (é 1,99× no PDK), e varredura de `Cmem`. Consumo **14× menor** (6,03 nW, 43,2 pJ/disparo), f–I linear com R² = 0,999996 e ganho a 0,7% do nível 1, pulso aprovado no critério funcional. **⚠️ Fecha invertendo o achado central: `Cmem` CONTROLA a frequência no PDK** (§3). |
-| 2 | Monte Carlo (descasamento) | Não iniciada — maior risco do projeto |
+| 2 | Monte Carlo (descasamento) | **Rodada 1 (instrumento) CONCLUÍDA em 2026-09-08.** Motor estatístico validado: sorteia por instância (100/100, inclusive o par do espelho de geometria idêntica), magnitude bate com os slopes do PDK a 1,05–1,07× em sub-limiar, Pelgrom confere (1,944 e 1,952 contra 2,000), controle negativo dá σ = 0 exato e a convergência fecha em 0,0006%. **Achado que mudou o procedimento: `set rndseed` no `.control` não fixa o sorteio — só `.option seed`** (§7). Rodada 2 (a medida) não iniciada — continua o maior risco do projeto |
 | 3–10 | Cantos, par acoplado, coincidência, AER/FPGA, layout, tapeout | Não iniciadas |
 
 Nenhum hardware foi construído. Todo número neste repositório vem de simulação ou de
@@ -668,6 +668,35 @@ precisasse desligar o `scale` concluiria que não há `scale` para desligar.
 **Por que o erro sobreviveu:** ele foi verificado por experimento (o número bateu) e não
 pela cadeia de `.include`. Um experimento que passa por um motivo e é creditado a outro é
 indistinguível de um experimento que passa.
+
+**Semente de Monte Carlo: `.option seed=N` no netlist. NUNCA `set rndseed` no `.control`.**
+Medido em 2026-09-08 (`resultados/2026-09-08_etapa2_instrumento/`).
+
+Os `.model` do PDK que carregam o `AGAUSS` são avaliados **quando o netlist é lido**. O
+bloco `.control` só executa **depois**. Um `set rndseed` ali chega tarde: o sorteio já
+aconteceu, com a semente que a ngspice escolheu sozinha — que **varia entre execuções**.
+
+| mecanismo | mesma semente, 2 execuções | mesma semente, `tstep` diferente |
+|---|---|---|
+| `set rndseed=N` no `.control` | **DIFERE** | **DIFERE** |
+| `.option seed=N` no netlist | idêntico bit a bit | idêntico bit a bit |
+
+**A falha é silenciosa e imita física.** Com a semente solta, o teste de convergência do
+neurônio acusou **+4,84%** ao dividir `tstep` por 4 — num circuito que converge a 0,002%.
+Não era o integrador: era **outra amostra**. Com `.option seed` o desvio caiu para
+**−0,0006%**, fator 8 000×.
+
+**Como separar os dois casos em 30 segundos:** ponha um `op` antes do `tran` e imprima um
+nó de polarização. O ponto de operação DC **não pode** depender do `tstep`. Se ele mudar, o
+sorteio mudou e a comparação é entre circuitos diferentes. Foi assim que este erro caiu:
+`v(rp1)` deu 0,843524 V e 0,852996 V com a mesma semente.
+
+**Esta é a quarta ocorrência da mesma classe de falha neste projeto** — `abstol` contra o
+sinal, `reltol` contra o pico do ramo, limiar fixo contra pulso colapsado, e agora semente
+contra ordem de avaliação. Em todas o instrumento falhou e o sintoma foi um número limpo.
+
+**Monte Carlo exige o canto `*_mm`.** `mc_mm_switch` = 0 nos cantos lisos: a contribuição
+não é pequena, é **exatamente zero**. Use `.lib ... tt_mm`; não edite o PDK.
 
 **`.nodeset` obrigatório em netlist com espelho de corrente.** Com `uic`, o ngspice pula o
 ponto de operação DC e parte de 0 V em todo nó fora do `.ic`. O nó de referência de um

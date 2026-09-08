@@ -206,6 +206,33 @@ verificação de quadratura entre as três é ela própria um teste do motor.
 
 ---
 
-## Placar
+## Placar — preenchido em 2026-09-08 após a execução. Nada acima foi editado.
 
-A preencher **depois** da execução, sem editar nada acima.
+| teste | previsto | medido | veredito |
+|---|---|---|---|
+| V5 | f a menos de 1% de 139,58 Hz | 139,5821 Hz, +0,002% | ✅ confirmada |
+| V0 | σ(f) = zero exato | 0,000 Hz; 6 arquivos, 1 SHA-256 | ✅ confirmada |
+| V1 | 100 distintos por array | 100/100 nos três, inclusive o par do espelho | ✅ confirmada |
+| V2 | sem semente: idênticas | **diferentes** | ❌ **REFUTADA** |
+| V3 (array A) | σ(Vth_eq) 4,2 a 6,0 mV | 6,200 mV | ⚠️ 3,3% acima da faixa |
+| V3b | σ(A)/σ(C) = 2,00 ± 10% | 1,944 e 1,952 | ✅ confirmada |
+| V4 | σ(f)/f > 2% | 1,762% | ❌ **REFUTADA** (passa o critério de falha, < 0,1%) |
+| convergência | < 1% com `tstep`/4 | −0,0006% e −0,0018% | ✅ confirmada |
+
+**As duas refutações, e o que cada uma custou.**
+
+**V2** — previ que a ngspice repetiria o sorteio sem semente e que `set rndseed` o
+controlaria. As duas metades erradas: `set rndseed` no `.control` **não fixa nada**, porque
+os `.model` com `AGAUSS` são avaliados na leitura do netlist, antes do `.control` rodar.
+`.option seed=N` fixa. Isto **mudou o procedimento da rodada 2** e invalidou o primeiro
+teste de convergência, que acusou +4,84% quando o valor real é −0,0006%.
+
+**V4** — previ σ(f)/f > 2%, medido 1,762%. O erro em si é pequeno; o que ele expõe não é:
+1,76% é **6,2× menor** que os ~11% de piso estimados para o descasamento de corrente dos
+espelhos. A corrente descasa muito mais que a frequência.
+
+**V3** — o modo de falha que registrei ("subestimar, como já aconteceu duas vezes na
+etapa 1") **aconteceu de novo**, pelo motivo que eu mesmo escrevi e não segui: dispensei o
+`voff` com uma frase, e o `voff_slope` do nfet é **2,1× maior** que o do `vth0`.
+
+Detalhes em `instrumento.md`.
