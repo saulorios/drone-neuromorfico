@@ -785,6 +785,24 @@ ngspice -b spice/neuronio.cir                          # simulação avulsa
 Os scripts leem `NGSPICE_BIN` (padrão: `ngspice` do PATH) e `RUN_TAG` (padrão:
 `rodada_atual`) do ambiente. Não há mais caminhos absolutos embutidos.
 
+**Saída bruta do ngspice: NUNCA versionada, NUNCA arquivada — APAGADA.** Convenção
+firmada em 2026-09-08. Os `.txt` do `wrdata` chegam a 49 MB por corrida transiente; uma
+rodada da etapa 2 produziu 393 MB. **Comprimir resolve disco pela metade e não resolve o
+repositório.**
+
+O que fica versionado é o **`.cir`**, que tem alguns kB e **regenera o bruto**. Isso só
+funciona porque `scripts/mc_lib.py:ensure()` executa o netlist quando o `.txt` falta —
+quem clonar o repositório roda o script de análise e o bruto reaparece. **Verificado em
+2026-09-08:** apagados os 393 MB, o `v5_nominal.cir` regenerou e a frequência voltou a
+139,5821 Hz, idêntica. Um script que dependa de ler bruto arquivado quebra a convenção e
+precisa voltar a regenerar.
+
+**Armadilha de `git add -A`, custou 233 MB.** Stagear o bruto e depois dar `git reset`
+**não apaga os blobs**: eles ficam no banco de objetos como inalcançáveis. O `.git` foi a
+236 MB com um histórico de apenas 4,46 MB. O conserto é `git gc --prune=now`, que é coleta
+de lixo e **não** reescrita de histórico. Verifique com
+`git fsck --unreachable | grep -c "unreachable blob"`.
+
 **Resultados:** uma pasta datada por rodada em `resultados/`. Nunca sobrescrever uma
 rodada anterior — comparar a simulação de hoje com a de duas semanas atrás é
 frequentemente o que revela um erro.

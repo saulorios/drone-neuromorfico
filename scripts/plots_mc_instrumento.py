@@ -6,14 +6,13 @@ Caminhos relativos a ROOT.
 import os
 import sys
 import hashlib
-import gzip
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from mc_lib import ROOT, load, freq
+from mc_lib import ROOT, load, freq, ensure
 
 TAG = os.environ.get("RUN_TAG", "2026-09-08_etapa2_instrumento")
 R = os.path.join(ROOT, f"resultados/{TAG}/raw")
@@ -27,20 +26,15 @@ GEO = {"A": ("nfet W=1 L=0.5", 0.5, 3.356e-3, 7.0e-3),
 
 
 def sha(p):
-    """SHA-256 do CONTEUDO descompactado, para o hash nao mudar com a compactacao."""
-    f = os.path.join(R, p)
-    op = (gzip.open if not os.path.exists(f) else open)
-    if not os.path.exists(f):
-        f += ".gz"
-    with op(f, "rb") as fh:
+    """SHA-256 do bruto, regenerado a partir do .cir se preciso."""
+    ensure(f"resultados/{TAG}/raw/{p}")
+    with open(os.path.join(R, p), "rb") as fh:
         return hashlib.sha256(fh.read()).hexdigest()[:16]
 
 
 def arr(p):
-    f = os.path.join(R, p)
-    if not os.path.exists(f):
-        f += ".gz"
-    d = np.loadtxt(f)
+    ensure(f"resultados/{TAG}/raw/{p}")
+    d = np.loadtxt(os.path.join(R, p))
     v = np.abs(np.atleast_1d(d[0, 1::2] if d.ndim > 1 else d[1::2]))
     return {"A": v[0:N], "B": v[N:2 * N], "C": v[2 * N:3 * N]}
 

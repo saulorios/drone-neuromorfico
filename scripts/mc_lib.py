@@ -22,16 +22,32 @@ def run(cir_rel):
     return p.returncode == 0, err
 
 
+def ensure(txt_rel):
+    """Garante que o bruto existe, REGENERANDO a partir do .cir se preciso.
+
+    Convencao do projeto (CLAUDE.md §7): bruto do ngspice nunca e' versionado
+    nem arquivado — e' apagado. O `.cir` fica no repositorio e regenera. Isto
+    aqui e' o que torna essa convencao utilizavel: quem clonar o repositorio
+    roda o script e o bruto reaparece.
+    """
+    p = os.path.join(ROOT, txt_rel)
+    if os.path.exists(p):
+        return txt_rel
+    cir = txt_rel[:-4] + ".cir" if txt_rel.endswith(".txt") else txt_rel + ".cir"
+    if not os.path.exists(os.path.join(ROOT, cir)):
+        raise FileNotFoundError(f"nem o bruto {txt_rel} nem o netlist {cir} existem")
+    ok, err = run(cir)
+    if not os.path.exists(p):
+        raise RuntimeError(f"{cir} nao regenerou {txt_rel}: {err}")
+    return txt_rel
+
+
 def load(txt_rel, ncols):
     """Le a saida de wrdata. ngspice grava (tempo, valor) por variavel.
 
-    Aceita o bruto compactado: os traces de tensao ocupam ~50 MB por corrida e
-    sao arquivados em .gz. numpy le .gz direto.
+    Se o bruto nao existir, regenera a partir do .cir (ver `ensure`).
     """
-    p = os.path.join(ROOT, txt_rel)
-    if not os.path.exists(p) and os.path.exists(p + ".gz"):
-        p += ".gz"
-    d = np.loadtxt(p)
+    d = np.loadtxt(os.path.join(ROOT, ensure(txt_rel)))
     t = d[:, 0]
     return t, {i: d[:, 2 * i + 1] for i in range(ncols)}
 

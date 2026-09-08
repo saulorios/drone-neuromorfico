@@ -6,6 +6,41 @@ valiosa que o descarte. Ordem cronológica inversa (mais recente no topo).
 ---
 
 
+
+## 2026-09-08 — Higiene do repositório: bruto se apaga, não se comprime
+
+**Sem simulação, sem alteração de circuito, sem número novo.**
+
+**A convenção que estava pela metade.** O §7 sempre disse que o bruto do ngspice não é
+versionado e que o `.cir` regenera. Mas na rodada 1 da etapa 2 eu **comprimi** os 393 MB de
+bruto em vez de apagá-los, e ensinei dois scripts a ler `.gz`. Isso resolve disco pela
+metade e não resolve o repositório — e, pior, faz os scripts dependerem de um arquivo que a
+convenção diz que não deve existir. Corrigido: bruto apagado, e
+`scripts/mc_lib.py:ensure()` passa a **executar o netlist** quando o `.txt` falta.
+**Verificado:** apagados os 393 MB, o `v5_nominal.cir` regenerou e deu 139,5821 Hz,
+idêntico ao medido.
+
+**Um erro meu que custou 233 MB no `.git`.** Um `git add -A` na rodada anterior stageou os
+`.txt.gz`; o `git reset` seguinte desfez o stage mas **não apagou os blobs**. Ficaram 35
+objetos inalcançáveis somando 259 MB, num repositório cujo histórico inteiro tem **4,46 MB
+em 244 blobs**. `git gc --prune=now` levou o `.git` de **236 MB a 3,1 MB** — e isso é
+coleta de lixo, não reescrita de histórico. A distinção importa: nenhum commit foi tocado.
+
+**Diagnóstico antes de apagar, e ele mudou o plano.** A regra de parada do Saulo era não
+reescrever histórico se o PDK ou o bruto aparecessem versionados. `spice/models/sky130`:
+**zero**. `resultados/*/raw/*`: 133 arquivos, mas **todos `.cir` (127) e `.npy` (6), zero
+`.txt`/`.gz`** — exatamente o que a convenção manda versionar. Maior blob do histórico:
+0,34 MB, o dossiê. **Não havia histórico a reescrever.**
+
+**Varredura para publicação — quatro achados, nenhum credencial.** Nenhuma chave, token ou
+senha em arquivo nenhum, nem no estado atual nem em blob nenhum do histórico. O que existe é
+identificador pessoal: 20 blobs do histórico com `/home/saulo-rios/...` dentro de `.cir` da
+rodada de 2026-09-06 (o erro que o §9 documenta como corrigido — a correção pegou o estado
+atual, não o histórico); o e-mail do autor em todos os 26 commits; o nome completo nos
+metadados do PDF; e duas URLs de sessão do Claude em 4 mensagens de commit. **Publicação
+suspensa aguardando decisão do Saulo.**
+
+---
 ## 2026-09-08 — Etapa 2, rodada 1: instrumento validado, e a semente não era semente
 
 **Fonte:** [`resultados/2026-09-08_etapa2_instrumento/instrumento.md`](../resultados/2026-09-08_etapa2_instrumento/instrumento.md)

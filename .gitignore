@@ -1,11 +1,15 @@
-# Artefatos temporarios de simulacao
-resultados/rodada_atual/
-*.raw
-__pycache__/
-
-# PDK: multiplos GB, instalado localmente, nunca versionado
+# PDK sky130: ~127 MB instalados localmente, nunca versionado.
+# Instalacao reproduzivel documentada no CLAUDE.md §2.
+spice/models/sky130/
 spice/models/sky130*/
 
-# Saidas brutas volumosas do ngspice (netlists .cir sao versionados)
+# Saida bruta do ngspice: NUNCA versionada, NUNCA arquivada — apagada.
+# Os netlists .cir SAO versionados e regeneram o bruto (CLAUDE.md §7).
 resultados/*/raw/*.txt
-resultados/*/raw/*.txt.gz
+resultados/*/raw/*.gz
+resultados/rodada_atual/
+*.raw
+
+# Python
+__pycache__/
+*.pyc
