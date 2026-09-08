@@ -213,13 +213,80 @@ chip fazem sentido, e precisa ser conhecido **antes do layout**.
 
 **Pergunta:** o sistema aponta a direção de um som real?
 
-Primeira etapa com mundo físico. Critério do dossiê: bater palma de um lado, o canal
-correto responde.
+Primeira etapa com mundo físico. Critério do dossiê: bater palma de um lado, o
+canal correto responde.
 
 **Ponto de decisão (dossiê §8.1):** se funcionar, decidir entre buscar silício ou
-permanecer em FPGA. **FPGA é suficiente para muitas aplicações e evita todo o risco
-de fabricação.** Esta é a rampa de saída legítima do projeto, e está no plano desde
-a v1.0.
+permanecer em FPGA. FPGA é suficiente para muitas aplicações e evita todo o risco
+de fabricação. Esta é a rampa de saída legítima do projeto.
+
+---
+
+### A lacuna: a frente de entrada não tem etapa no plano
+
+Entre o microfone e o primeiro neurônio existe um subsistema que converte uma onda
+contínua em pulsos. Ele aparece na arquitetura — o dossiê §5.4 registra que a
+interface analógica de sensor é específica por modalidade e vai num chip pequeno
+separado — mas **nenhuma das dez etapas o projeta**.
+
+E não é um subsistema só. São dois, com dificuldades muito diferentes.
+
+**Para localização (nível "alvo" do §6.2): detector de início. Factível.**
+Dois microfones, amplificação, e um disparo na subida do envelope sonoro. A
+informação de direção está na diferença de tempo de chegada entre os dois canais,
+e o detector de coincidência da etapa 5 é justamente o que lê essa diferença.
+Não é preciso decompor o som em frequências para saber de que lado ele veio.
+Isto cabe na etapa 7 como está planejada.
+
+**Para novidade aprendida (nível "ambicioso" do §6.2): banco de filtros. Não
+factível com o que existe.**
+Aprender o padrão de fundo de um ambiente exige decompor o som em bandas de
+frequência *antes* de virar pulsos — caso contrário a camada plástica recebe uma
+única linha de eventos de intensidade e não tem estrutura sobre a qual formar
+associações. O que se aprende de "há som" é muito menos do que se aprende de "há
+som nestas bandas, nesta ordem".
+
+Isso é uma cóclea de silício: um banco de filtros analógicos em cascata, com
+retificação e geração de pulsos por canal. É um subsistema do tamanho do que já
+foi feito até aqui, com literatura própria (linhagem Lyon e Mead, Caltech). É
+projeto de circuito analógico, não de neurônio.
+
+### Consequência para o plano
+
+| Nível de sucesso (§6.2) | Frente de entrada necessária | Está no plano? |
+|---|---|---|
+| Mínimo — neurônio com f–I linear nos cantos | nenhuma | sim |
+| Intermediário — coincidência com janela estável | nenhuma | sim |
+| **Alvo — localização de fonte sonora** | detector de início, 2 canais | sim, cabe na etapa 7 |
+| **Ambicioso — novidade não supervisionada** | banco de filtros por bandas | **não** |
+
+O plano de dez etapas leva ao nível "alvo". O nível "ambicioso" precisa de uma
+etapa que não existe.
+
+### O que fazer com isso — nada agora
+
+Não é bloqueante e não deve ser aberto antes da etapa 7 estar de pé. Registrado
+para que a descoberta aconteça no papel e não no meio da bancada.
+
+Três caminhos possíveis, para quando a decisão chegar. **Nenhum foi avaliado; é
+levantamento, não recomendação:**
+
+- **Cóclea analógica própria** — coerente com o resto do projeto e com o argumento
+  de consumo, mas é um segundo projeto de circuito do mesmo porte.
+- **Frente de entrada digital** — banco de filtros em FPGA ou microcontrolador,
+  gerando pulsos que entram no chip neuromórfico. Muito mais rápido de construir;
+  gasta energia continuamente, o que contradiz a premissa da Parte 1 — mas apenas
+  no chip de interface, não na malha de neurônios.
+- **Sensor de eventos de áudio comercial** — verificar se existe algo pronto que
+  já entregue pulsos por banda. **Não pesquisado.**
+
+### Palpite não testado (Claude, 2026-09-07)
+
+O caminho digital pode ser o certo mesmo contrariando a premissa de consumo, pelo
+mesmo raciocínio que levou o peso sináptico para o digital na etapa 4: a interface
+é um chip pequeno e único por modalidade, enquanto os neurônios são milhares. Um
+custo fixo num bloco não replicado pesa pouco no total. **Não medido, não
+decidido, e a decisão não é do executor.**
 
 ---
 
