@@ -136,3 +136,68 @@ lateral só faz sentido depois que houver mais de um neurônio funcionando junto
 mínimo.
 
 **Não medido, não simulado, não decidido.** É levantamento.
+
+---
+
+## Módulo de perfil de polarização (a analogia do DNA) — 2026-09-09
+
+**Isto é vocabulário, não decisão nova.** Dá nome a algo que o projeto já decidiu duas
+vezes, em lugares separados, sem nunca ter chamado de nada.
+
+### A analogia
+
+O DNA cumpre **duas** funções distintas, e confundi-las é o que faz a analogia com hardware
+dar errado:
+
+| função do DNA | quando | reversível? |
+|---|---|---|
+| **constrói** o cérebro no desenvolvimento — quantos neurônios, onde, quem se liga a quem | uma vez | **não** |
+| **modula** o que já está construído, regulando expressão | contínua, ao longo da vida | **sim** |
+
+No chip:
+
+| função | o que é | quando |
+|---|---|---|
+| construir | **o tapeout** | uma vez. A fiação é metal e não muda depois de fabricada |
+| modular | **as tensões de polarização** | a qualquer momento, de fora |
+
+As tensões de polarização não mudam fiação. Mudam **quanto cada parte responde** —
+constante de tempo, limiar, corrente de repouso, taxa de plasticidade.
+
+### A consequência de organização, que é o registro que importa
+
+Um **módulo externo de perfis** é a forma correta de organizar isso: uma memória digital
+guardando **conjuntos nomeados** de valores de polarização, mais conversores
+digital-analógico que os aplicam ao chip. Perfil "áudio", perfil "presença", perfil
+"associação". **Trocar o perfil muda o comportamento do chip sem refabricar nada.**
+
+### Por que isto não é decisão nova
+
+É a soma de duas decisões que já existiam e nunca haviam sido postas lado a lado:
+
+| decisão existente | onde está |
+|---|---|
+| um chip homogêneo replicado; a modalidade vira **parâmetro de configuração, não silício** | dossiê §5.4, e acima em "Chips especializados por modalidade" |
+| toda polarização que define constante de tempo, limiar ou corrente deve ser **acessível externamente** | `CLAUDE.md` §6, decisão de 2026-09 |
+
+**O soquete já tinha sido projetado; faltava o nome.** Nenhuma das duas linhas foi alterada
+— esta entrada aponta para elas.
+
+### O LIMITE, e sem ele a analogia engana
+
+Registrado junto de propósito. O módulo de perfis **não pode**:
+
+- **ativar neurônios específicos** — não há como "ligar o neurônio 47 e desligar o 48"
+  por polarização; a polarização é global ou por bloco;
+- **escolher quem se liga a quem DENTRO do neurônio** — isso é fiação, fixada no tapeout.
+
+O que ele **pode**:
+
+- ajustar o **comportamento** de todos os neurônios (as grandezas da tabela acima);
+- **reconfigurar quem conversa com quem ENTRE neurônios** — via tabela de roteamento AER,
+  que é digital e reprogramável (ver `etapas.md`, etapa 6).
+
+A analogia com o DNA é boa para separar "construir" de "modular". Ela é **ruim** se levar a
+pensar que o perfil pode reorganizar a rede: o DNA constrói fiação nova durante o
+desenvolvimento, e o chip não tem desenvolvimento. Depois do tapeout, só a tabela AER se
+mexe.

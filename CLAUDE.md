@@ -542,7 +542,7 @@ no PMOS dos dois estágios. A topologia axon-hillock fica (§6). O que segue abe
 | 2026-09 | **Controle de voo não aprende** — software maduro existente (PX4 / ArduPilot) | Se a camada que estabiliza o drone aprender errado, o drone cai. Plasticidade só onde o erro custa um alarme falso. |
 | 2026-09 | **Plasticidade modulada por surpresa** | Resolve dois problemas de uma vez: esquecimento catastrófico (quase nada é gravado) e correlações espúrias (ocorrem em momentos calmos, com plasticidade fechada). |
 | 2026-09 | **`Cmem` pequeno** | Etapa 0, §3: `Cmem` não compra frequência e custa excursão de sinal. |
-| 2026-09 | **Toda polarização que define constante de tempo, limiar ou corrente deve ser acessível externamente** | Se a corrente sair 40% menor que o simulado, compensa-se ajustando a polarização em vez de refabricar. |
+| 2026-09 | **Toda polarização que define constante de tempo, limiar ou corrente deve ser acessível externamente** | Se a corrente sair 40% menor que o simulado, compensa-se ajustando a polarização em vez de refabricar. **Esta decisão, somada à do chip homogêneo (acima), é o que torna possível o _módulo de perfil de polarização_ — ver `docs/caderno.md`, entrada de 2026-09-09. A decisão mora aqui; a entrada do caderno só a nomeia e registra o limite.** |
 
 ---
 

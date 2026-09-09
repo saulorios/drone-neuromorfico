@@ -258,6 +258,17 @@ ao mesmo tempo e a arbitragem engarrafa.
 **Ponto de decisão (dossiê §8.1):** o limite de vazão define quantos neurônios por
 chip fazem sentido, e precisa ser conhecido **antes do layout**.
 
+**E a etapa decide mais do que vazão.** A **tabela de roteamento AER é a única parte da
+conectividade que permanece editável depois do tapeout** — a fiação dentro do neurônio é
+metal e está fixada, mas quem conversa com quem entre neurônios é uma tabela digital e
+reprogramável. Isso eleva a importância desta etapa: ela não decide só quantos eventos
+passam, decide **quanto do chip continua reconfigurável depois de fabricado**.
+
+O outro eixo de reconfiguração — o comportamento dos neurônios, via tensões de
+polarização — está registrado em `docs/caderno.md`, "Módulo de perfil de polarização
+(a analogia do DNA)", 2026-09-09. Os dois eixos são complementares e independentes: a
+polarização muda **como** cada neurônio responde, a tabela AER muda **com quem** ele fala.
+
 ---
 
 ## Etapa 7 — Localizador sonoro · ~R$ 500
@@ -359,6 +370,14 @@ decidido, e a decisão não é do executor.**
   direto do PDK.
 - **Ctot medido é 129,71 fF** contra 120 fF de `Cmem` + `Cfb`: sobram 9,7 fF de
   porta e parasitas. O layout vai acrescentar mais, e agora isso muda a frequência.
+- **Quantas tensões de polarização distintas saem do chip — é ENTRADA de projeto do
+  layout, não consequência.** Cada tensão de polarização consome **pino e roteamento**, e
+  os dois são recursos escassos que o layout tem de reservar desde o início. O módulo de
+  perfil de polarização (`docs/caderno.md`, entrada de 2026-09-09) transforma esse número
+  num **requisito explícito** em vez de um saldo acidental do que sobrou.
+  **O número não é determinado aqui.** Ele sai da **etapa 5**, quando as constantes de
+  tempo do detector de coincidência estiverem definidas — só então se sabe quantas
+  polarizações independentes o circuito realmente precisa expor.
 
 ---
 
