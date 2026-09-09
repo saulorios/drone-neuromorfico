@@ -83,6 +83,26 @@ Se eu concluir que o capacitor é grátis, terei provavelmente ignorado o roteam
 Se a conta mostrar que a arquitetura da Parte 5 do dossiê não cabe em 10 mm², **isso é
 relatório, não decisão**. Encolher a arquitetura é decisão do Saulo.
 
-## Placar
+## Placar — preenchido em 2026-09-09. Nada acima foi editado.
 
-A preencher depois, sem editar nada acima.
+| previsão | previsto | obtido | veredito |
+|---|---|---|---|
+| razão sinapse/neurônio, 4 bits | **0,4×** (faixa 0,15–1,5×) | **1,28 a 3,79×** | ❌ **REFUTADA** |
+| razão, 1 bit | 0,05–0,23× | 0,11 a 0,25× | ✅ |
+| razão, 2 bits | 0,10–0,47× | 0,22 a 0,50× | ✅ |
+| neurônios, S=100, 4 bits | 100 a 400 | 88 a 130 | ⚠️ pouco abaixo |
+| queda na contagem | 50 a 100× | ~150 a 250× | ❌ subestimei |
+| sinapse domina a partir de | ~3 sinapses/neurônio | 0,5 (4 bits) | ❌ subestimei |
+| densidade do MiM | 1 a 3 fF/µm² | 2,00 fF/µm² | ✅ |
+| MiM sobrepõe transistor | sim | sim, sem regra que proíba | ✅ |
+
+**O modo de falha estava pré-registrado e aconteceu assim mesmo.** Escrevi que o modo mais
+provável era "subestimar" e que a armadilha específica seria o conversor de pA casados
+dominar a sinapse. Ele domina: 92,59 µm² ativos dos ~148 µm² ativos da sinapse de 4 bits.
+Escrevi o aviso e previ 0,4% assim mesmo — **a previsão não incorporou o próprio aviso.**
+
+**O que eu acertei e vale registrar:** separar o multiplicador de layout entre digital (1,0×,
+porque o LEF já é layout) e analógico casado (3–5×). Se eu tivesse aplicado 3–5× à área do
+LEF, teria inflado a sinapse por mais 3×.
+
+Detalhes em `area_sinapse.md`.

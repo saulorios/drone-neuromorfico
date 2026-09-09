@@ -100,3 +100,39 @@ podem ser artefato de tolerância, não de física.
   parasita no nó `mem`. É uma explicação única e econômica para as ressalvas 1, 2 e 3,
   e é barata de testar. Enquanto não for testada, continua sendo hipótese: pode ser que
   o espalhamento venha só de `tstep` e a tolerância não tenha nada a ver.
+
+---
+
+## Mecanismo conhecido e disponível, NÃO planejado — inibição lateral (2026-09-09)
+
+**Registrado para não ser redescoberto tarde. Não abrir agora.**
+
+**O que é.** Inibição lateral / *winner-take-all* (Mead, 1989): num grupo de neurônios, o
+primeiro a disparar suprime os vizinhos por um intervalo curto. O efeito é **codificação
+esparsa** — de N neurônios que poderiam responder a um estímulo, poucos respondem.
+
+**Por que é barato.** É circuito de **poucos transistores compartilhado por grupo**, não uma
+célula por neurônio. Não exige sinapse plástica, não exige memória, não exige peso. Numa
+malha onde a sinapse custa 383 a 568 µm² (R5), um mecanismo que melhora a representação sem
+sinapse nova é economicamente diferente de tudo o mais no projeto.
+
+**Onde ele encaixa.** É a **terceira perna do controle de esquecimento catastrófico**, junto
+com duas que já estão no dossiê:
+
+| perna | onde está | o que faz |
+|---|---|---|
+| modulação por surpresa | dossiê §5.2 | quase nada é gravado — fecha a plasticidade em momentos calmos |
+| consolidação em repouso | dossiê §5.1 | integra o aprendido durante o pouso, sem sobrescrever |
+| **inibição lateral** | **não planejada** | **codificação esparsa — menos sobreposição entre representações, logo menos interferência entre o que já se sabe e o que se aprende** |
+
+As três atacam o mesmo problema por vias independentes: a primeira controla **quando** se
+grava, a segunda **quando se reorganiza**, a terceira **quantos neurônios participam de cada
+representação**. Representações esparsas se sobrepõem menos, e sobreposição é o mecanismo do
+esquecimento catastrófico.
+
+**Por que NÃO abrir agora.** Vale a regra do projeto: uma pergunta por vez. A etapa 2 (medida
+de descasamento) e a decisão de arquitetura aberta pelo R5 vêm antes. Além disso, inibição
+lateral só faz sentido depois que houver mais de um neurônio funcionando junto — etapa 4 no
+mínimo.
+
+**Não medido, não simulado, não decidido.** É levantamento.

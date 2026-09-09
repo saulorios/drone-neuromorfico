@@ -139,6 +139,57 @@ abaixo do necessário a 27 °C, mas é condução direta de junção e cresce de
 
 ## Etapa 4 — Dois neurônios e uma sinapse
 
+### PRIMEIRA COISA DA ETAPA: a conta de área da sinapse · **feita em 2026-09-09**
+
+Vem antes de qualquer simulação de par acoplado, porque ela decide se a arquitetura da
+Parte 5 é construível na área disponível ou precisa encolher. Fonte:
+[`resultados/2026-09-09_area_sinapse/`](../resultados/2026-09-09_area_sinapse/area_sinapse.md).
+
+**A sinapse de 4 bits é MAIOR que o neurônio — entre 1,28 e 3,79×.**
+
+| peso | área da sinapse | razão sobre o neurônio (150–300 µm²) |
+|---|---|---|
+| 1 bit | 32,7 a 37,0 µm² | 0,11 a 0,25× |
+| 2 bits | 66,4 a 75,7 µm² | 0,22 a 0,50× |
+| **4 bits** | **382,9 a 568,1 µm²** | **1,28 a 3,79×** |
+
+**O termo que domina é o DAC casado, e a área dele sai do descasamento medido na etapa 2**
+(`σ(Vth) = 5,856 mV·µm/√A` do pfet, `n·Ut` ≈ 40 mV). Com critério de monotonicidade a 3σ, o
+DAC exige 2,14 µm² ativos em 1 bit, 4,63 em 2 bits e **92,59 em 4 bits** — a área escala
+como ~4ⁿ, resultado clássico de DAC casado que aqui sai dos números do próprio projeto.
+
+**Neurônios que cabem em 10 mm² (50% de aproveitamento), CONTANDO as sinapses:**
+
+| sinapses/neurônio | 1 bit | 2 bits | **4 bits** |
+|---|---|---|---|
+| 10 | 7 464 a 10 480 | 4 730 a 6 139 | **836 a 1 257** |
+| 30 | 3 547 a 4 420 | 1 945 a 2 333 | **288 a 430** |
+| **100** | 1 250 a 1 462 | 635 a 736 | **88 a 130** |
+| 300 | 439 a 502 | 217 a 249 | **29 a 43** |
+
+Contra os **15 000 a 33 000** que as etapas 9 e 10 declaravam contando **só neurônios**:
+fator de **150 a 250× para menos** na linha de S = 100 com 4 bits.
+
+**Onde a sinapse passa a dominar a área** (caso central, neurônio 225 µm²): a partir de
+**6,5** sinapses/neurônio com 1 bit, **3,2** com 2 bits, e **0,5** com 4 bits. Com 4 bits,
+**uma única sinapse já pesa o dobro do neurônio**. Acima de 10 sinapses/neurônio, o neurônio
+é ruído na conta em qualquer resolução.
+
+**A Parte 5 do dossiê NÃO especifica conectividade.** Ela descreve quatro camadas e a
+modulação por surpresa, mas em nenhum ponto declara sinapses por neurônio. Não existe uma
+célula da tabela que "a Parte 5 pede" — existe a que a *função* exige, e essa inferência é do
+executor: memória associativa tem capacidade ~0,14 padrões por sinapse (Hopfield), o que põe
+o piso útil perto de **S = 100** e o confortável em **S = 300**.
+
+**DECISÃO PENDENTE, e não é do executor.** Encolher a arquitetura — menos bits de peso, menos
+sinapses por neurônio, ou aceitar dezenas de neurônios em vez de milhares — é decisão do
+Saulo. Ver o registro de riscos (`CLAUDE.md` §7-A, R5).
+
+**O que muda no plano desta etapa:** medir densidade sináptica deixa de ser consequência e
+vira **critério de saída**. A etapa 4 não fecha sem um número de área de sinapse layoutada.
+
+---
+
 **Pergunta:** um neurônio consegue fazer o outro disparar de forma confiável?
 
 **A decisão que esta etapa carrega, e que o dossiê v1.0 não continha:** onde mora o
@@ -323,6 +374,18 @@ crescimento por descasamento é a incógnita que a etapa 2 vai fixar. Apostando 
 
 O dossiê v1.0 dizia "dezenas de neurônios". Confere.
 
+> ⚠️ **PREMISSA QUE FALTAVA, marcada em 2026-09-09. Os números acima contam APENAS
+> NEURÔNIOS, sem nenhuma sinapse. São TETO, não previsão.**
+>
+> A conta de área da sinapse (etapa 4, acima) mostra que uma sinapse de 4 bits ocupa
+> **1,28 a 3,79×** a área de um neurônio, e que acima de ~10 sinapses por neurônio a área do
+> neurônio é ruído na conta. Os 50 a 100 neurônios deste tile valem para uma malha **sem
+> sinapse nenhuma**. Com S = 10 e peso de 2 bits o mesmo tile comporta da ordem de **3 a 4**
+> neurônios; com S = 100 e 4 bits, **menos de um**.
+>
+> Os números não foram apagados porque o teto é informação útil — ele diz quanto o neurônio
+> sozinho custa. Mas ele **não** é a capacidade do chip.
+
 **O que esta etapa realmente compra**, e é mais que o silício: a bancada de medida.
 Chegar à etapa 10 sem saber medir dispersão de frequência entre neurônios reais
 seria pagar caro por dados que não se sabe ler.
@@ -347,7 +410,18 @@ vez:** encapsulamento além das 100 peças, placa de avaliação, e principalmen
 
 **Capacidade estimada:** 10 mm² de área útil a 50% de aproveitamento, com 150 a
 300 µm² por neurônio, dão **15 a 30 mil neurônios**. O v1.0 dizia "milhares".
-Confere. Mas o que decide se a área é preenchida não é dinheiro — é a etapa 6 dizer
+Confere.
+
+> ⚠️ **PREMISSA QUE FALTAVA, marcada em 2026-09-09. Estes 15 a 30 mil contam APENAS
+> NEURÔNIOS, sem nenhuma sinapse. São TETO, não previsão** — e o teto está a
+> **150 a 250×** da contagem real para uma malha com conectividade de assembleia.
+>
+> Contando as sinapses (etapa 4): **1 250 a 1 462** neurônios com S = 100 e peso de 1 bit;
+> **88 a 130** com S = 100 e 4 bits; **29 a 43** com S = 300 e 4 bits.
+>
+> O número não foi apagado. Ele responde "quantos neurônios cabem", que é uma pergunta
+> diferente de "quantos neurônios de uma rede cabem" — e o projeto vinha usando a resposta
+> de uma como se fosse da outra. Mas o que decide se a área é preenchida não é dinheiro — é a etapa 6 dizer
 quantos o barramento consegue servir. O preço é por projeto, não por neurônio.
 
 **Nó avançado está descartado**, com motivo: a área é dominada por capacitores e por

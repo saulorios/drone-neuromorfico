@@ -865,6 +865,43 @@ Ver §5-A item 15b. Injeção de até 3,7 pA no substrato a cada disparo, num ci
 **sinal também é de pA**. Mitigação por anel de guarda custa área, e amarra-se a R1 e à
 contagem de neurônios.
 
+### R5 · Densidade sináptica é restrição de ÁREA — e a contagem de neurônios do projeto estava contando só neurônios
+
+Levantado em 2026-09-09 (`resultados/2026-09-09_area_sinapse/`). **Não estava no mapa de
+riscos do dossiê §8, e é o risco de maior alavancagem sobre a arquitetura.**
+
+**O erro por omissão.** O projeto vinha estimando neurônios por chip a partir da área do
+**neurônio** — 15 000 a 30 000 em 10 mm². Numa rede, sinapses são muito mais numerosas que
+neurônios, e **uma sinapse com peso digital de 4 bits ocupa 1,28 a 3,79× a área de um
+neurônio**. Contando sinapses, a mesma área comporta **88 a 130** neurônios com 100 sinapses
+cada — fator de **150 a 250× para menos**.
+
+**Por que a sinapse é grande, e a causa é medida e não suposta.** O peso digital em si é
+barato (latch `dlxtp_1` = 15,01 µm²/bit, área de LEF real). Quem domina é o **conversor de
+bits para corrente**, que precisa entregar picoamperes **casados**. A área de casamento sai
+do `σ(Vth) = 5,856 mV·µm/√A` do pfet e do `n·Ut` ≈ 40 mV medidos na etapa 2: com
+monotonicidade a 3σ, o DAC exige **92,59 µm² ativos em 4 bits** contra 4,63 em 2 bits. A área
+escala como ~4ⁿ.
+
+**O trade-off, e ele é de arquitetura, não de circuito:**
+
+| | |
+|---|---|
+| **assembleia neural é fenômeno de conectividade densa** | memória associativa tem capacidade ≈ 0,14 padrões por sinapse por neurônio (Hopfield). Menos sinapses por neurônio significa **assembleias mais pobres** — menos padrões armazenáveis, associação mais rasa |
+| **cada sinapse custa área** | e acima de ~10 sinapses/neurônio a área do chip é sinapse, não neurônio (61% a 96%) |
+| **cada bit de peso custa ~4×** | 1 bit: 32,7–37,0 µm² · 2 bits: 66,4–75,7 · 4 bits: 382,9–568,1 |
+
+**Onde fica o limite útil de conectividade NÃO FOI DETERMINADO, e não é decisão do
+executor.** Quantas sinapses por neurônio a camada de "associação e novidade" (dossiê §5.1)
+precisa para funcionar é pergunta de arquitetura. A Parte 5 do dossiê **não a responde** —
+ela descreve camadas e plasticidade, mas em nenhum ponto declara conectividade. O piso de
+S = 100 usado nas tabelas é inferência do executor a partir da regra de Hopfield, não do
+dossiê.
+
+**Amarra-se a três outros itens de área que já disputam o mesmo silício:** o anel de guarda
+contra acoplamento por substrato (R2), os transistores maiores que a etapa 2 pode exigir para
+casar (R1/R3), e o mínimo de 14 neurônios por ramo de referência do espelho (§5-A item 6).
+
 ### R4 · O descasamento sub-limiar do PMOS não tem contrapartida no NMOS — **e os dois espelhos são PMOS**
 
 Verificado nos arquivos `__mismatch.corner.spice` do PDK em 2026-09-08. Os dois dispositivos

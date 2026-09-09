@@ -7,6 +7,61 @@ valiosa que o descarte. Ordem cronológica inversa (mais recente no topo).
 
 
 
+
+## 2026-09-09 — A sinapse é maior que o neurônio, e a contagem do projeto contava só neurônios
+
+**Fonte:** [`resultados/2026-09-09_area_sinapse/area_sinapse.md`](../resultados/2026-09-09_area_sinapse/area_sinapse.md)
+— sem simulação. Leitura do PDK, LEF público das células padrão, e aritmética. Previsões
+commitadas em `dd8c75e`, antes de qualquer cálculo.
+
+**O erro por omissão.** O projeto estimava neurônios por chip a partir da área do **neurônio**
+— 15 000 a 30 000 em 10 mm². Numa rede, sinapses são muito mais numerosas. Uma sinapse com
+peso digital de **4 bits ocupa 1,28 a 3,79× a área de um neurônio**, e contando sinapses a
+mesma área comporta **88 a 130** neurônios com 100 sinapses cada. **Fator de 150 a 250×.**
+
+**Quem domina não é a memória: é o conversor.** O peso em si é barato — o latch `dlxtp_1` do
+`sky130_fd_sc_hd` mede 5,52 × 2,72 µm = 15,01 µm² por bit, área de LEF real. Quem explode é o
+DAC que transforma bits em corrente **casada** de picoamperes. A área de casamento sai do
+descasamento **medido na etapa 2** (`σ(Vth)` = 5,856 mV·µm/√A do pfet, `n·Ut` ≈ 40 mV): com
+monotonicidade a 3σ, **92,59 µm² ativos em 4 bits contra 4,63 em 2 bits**. Escala como ~4ⁿ.
+
+**Minha previsão foi refutada, e o modo de falha estava pré-registrado.** Previ razão de 0,4×
+para 4 bits; deu 1,28 a 3,79×. E eu havia escrito, no próprio pré-registro, que o modo de
+falha mais provável era subestimar e que a armadilha seria exatamente o conversor de pA
+casados dominar a célula. **Escrevi o aviso e previ contra ele.**
+
+**Duas verificações independentes que o palpite não teria dado.** A bitcell SRAM 1RW de
+fundição mede **1,896 µm²** — 8× menor que o latch — mas usa regras "core memory" com OPC
+pré-fabricado e restrições de layout de matriz: serve para bloco de memória, não para célula
+espalhada ao lado de cada sinapse. E o sítio da célula padrão, **0,460 × 2,720 µm**, veio do
+PDK local e confere com o LEF público.
+
+**Parte 5 do dossiê: não especifica conectividade.** Descreve quatro camadas e a modulação
+por surpresa, mas em nenhum ponto declara sinapses por neurônio. O piso de S = 100 usado nas
+tabelas é inferência minha a partir da capacidade de Hopfield (~0,14 padrões por sinapse),
+**não do dossiê**.
+
+**Capacitor MiM — o "2 fF/µm², a conferir" de 2026-09-06 está CONFERIDO:** `camimc` = **2,00
+fF/µm²** no canto típico, 1,778 a 2,231 nos cantos de capacitância. `Cmem` = 47,4 µm²,
+`Cfb` = 8,9 µm². E o PDK **permite** o MiM sobre transistor — `cap_mim_m3_1` é MET3 ∩ CAPM,
+muito acima do poli, e não há regra que proíba. Mas **não é de graça**: `capm.3` faz a placa
+inferior ser metal3, e `capm.11` exige 0,5 µm de afastamento de metal3 não relacionado. O
+capacitor apaga met3 e met4 na sua sombra. A estimativa de 150–300 µm² por neurônio parece
+conservadora (105–136 sem sobreposição, ~78 com), mas o custo migra para congestionamento de
+roteamento, que só o layout da etapa 8 quantifica. **E não muda a conclusão da sinapse** — se
+o neurônio encolher, a razão sinapse/neurônio só **piora**.
+
+**Registrado:** a conta como primeira coisa da etapa 4 (é critério de saída, não consequência);
+as estimativas das etapas 9 e 10 marcadas como **teto e não previsão**, com os números
+preservados; o risco **R5** no mapa (`CLAUDE.md` §7-A); e, no caderno, a inibição lateral
+(*winner-take-all*, Mead) como mecanismo conhecido, barato e **não planejado** — terceira
+perna do controle de esquecimento catastrófico, ao lado da modulação por surpresa (§5.2) e da
+consolidação em repouso (§5.1). Não aberta.
+
+**DECISÃO PENDENTE, não do executor:** encolher a arquitetura da Parte 5 — menos bits de peso,
+menos sinapses por neurônio, ou aceitar dezenas de neurônios em vez de milhares.
+
+---
 ## 2026-09-08 — Higiene do repositório: bruto se apaga, não se comprime
 
 **Sem simulação, sem alteração de circuito, sem número novo.**
